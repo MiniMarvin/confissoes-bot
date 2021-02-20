@@ -1,11 +1,10 @@
 'use strict';
 
-const uuid = require('uuid');
 const AWS = require('aws-sdk'); 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
-module.exports.status = async (event) => {
-  return {
+module.exports.status = async (event, context, callback) => {
+  const response = {
     statusCode: 200,
     body: JSON.stringify(
       {
@@ -16,6 +15,8 @@ module.exports.status = async (event) => {
       2
     ),
   };
+  
+  callback(null, response);
 
   // Use this code if you don't use the http event with the LAMBDA-PROXY integration
   // return { message: 'Go Serverless v1.0! Your function executed successfully!', event };
@@ -37,7 +38,7 @@ module.exports.createPost = async (event, context, callback) => {
   
   const date = (new Date()).toISOString();
   const tableData = {
-    TableName: process.env.CANDIDATE_TABLE,
+    TableName: process.env.MESSAGES_TABLE,
     Item: {
       date: date,
       text: text
@@ -51,7 +52,6 @@ module.exports.createPost = async (event, context, callback) => {
     return {
       statusCode: 500,
       body:JSON.stringify({
-        id: uuid.v1(),
         message: err,
         input: event
       })
@@ -67,10 +67,10 @@ module.exports.createPost = async (event, context, callback) => {
   }
 }
 
-module.exports.listPostsForUser = async (event) => {
+module.exports.listPostsForUser = async (event, context, callback) => {
   
 }
 
-module.exports.telegramHandler = async (event) => {
+module.exports.telegramHandler = async (event, context, callback) => {
   
 }

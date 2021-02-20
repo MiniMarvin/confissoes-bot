@@ -71,37 +71,37 @@ provider:
 
 functions:
   status:
-    handler: handler.status
+    handler: src/handler.status
     memorySize: 128
     description: Retorna uma mensagem de boas vindas
     events:
-    - http:
-      path: status
-      method: get
+      - http:
+          path: status
+          method: get
   createPost:
-    handler: handler.createPost
+    handler: src/handler.createPost
     memorySize: 128
     description: Cria uma mensagem anonima
     events:
-    - http:
-      path: createPost
-      method: post
+      - http:
+          path: createPost
+          method: post
   listPostsForUser:
-    handler: handler.listPostsForUser
+    handler: src/handler.listPostsForUser
     memorySize: 128
     description: Recupera os posts realizados por um determinado usuário
     events:
-    - http:
-      path: listPostsForUser
-      method: get
+      - http:
+          path: listPostsForUser
+          method: get
   telegramHandler:
-    handler: handler.telegramHandler
+    handler: src/handler.telegramHandler
     memorySize: 128
     description: Decide o que fazer com a chamada de API do telegram
     events:
       - http:
-        path: telegramHandler
-        method: get
+          path: telegramHandler
+          method: get
   
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
