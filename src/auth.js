@@ -1,9 +1,8 @@
-const crypto = require('crypto')
-
+const crypto = require("crypto")
 
 // TODO: implementar a validação de autenticação do twitter
 module.exports.twitterAuth = async (userId) => {
-    return true
+  return true
 }
 
 /**
@@ -13,6 +12,10 @@ module.exports.twitterAuth = async (userId) => {
  * @return string
  */
 module.exports.crcChallenge = (crc_token, consumer_secret) => {
-  let hmac = crypto.createHmac('sha256', consumer_secret).update(crc_token).digest('base64')
+  let hmac = crypto
+    .createHmac("sha256", consumer_secret)
+    .update(crc_token)
+    .digest("base64")
+    
   return hmac
 }
