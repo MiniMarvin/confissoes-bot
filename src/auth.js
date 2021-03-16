@@ -16,6 +16,6 @@ module.exports.crcChallenge = (crc_token, consumer_secret) => {
     .createHmac("sha256", consumer_secret)
     .update(crc_token)
     .digest("base64")
-    
+
   return hmac
 }
