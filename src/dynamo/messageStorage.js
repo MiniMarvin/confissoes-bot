@@ -45,16 +45,33 @@ const markMessagesSent = (usersData, tableName, client) => {}
  * Insere uma mensagem a uma lista de confissões do usuário.
  *
  * @param {string} message Insere uma mensagem em uma lista de confissões do usuário para fazer um único tweet com todas as confissões.
+ * @param {number} timestamp Timestamp da mensagem.
  * @param {string} userId O id do usuário no twitter.
  * @param {string} tableName O nome da tablea que contém as informações do usuário.
  * @param {AWS.DynamoDB.DocumentClient} client O cliente de acesso ao dynamodb.
  * @returns {Promise<boolean>}
  */
-const addMessageToConfession = async (message, userId, tableName, client) => {}
+const addMessageToConfession = async (
+  message,
+  timestpa,
+  userId,
+  tableName,
+  client
+) => {}
+
+/**
+ * Cancela a confissão realizada por um usuário.
+ *
+ * @param {string} userId O id do usuário no twitter.
+ * @param {string} tableName O nome da tablea que contém as informações do usuário.
+ * @param {AWS.DynamoDB.DocumentClient} client O cliente de acesso ao dynamodb.
+ */
+const cancelConfession = async (userId, tableName, client) => {}
 
 module.exports = {
   retrieveConfessionDataForUsers,
   alreadyInQueue,
   markMessagesSent,
   addMessageToConfession,
+  cancelConfession,
 }

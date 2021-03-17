@@ -2,14 +2,7 @@
  * Seleciona qual ação deve ser realizada, é a função que define o processamento de texto.
  *
  * @param {any} payload O payload de mensagem recebido.
- * @returns {
- *  {
- *    action: string,
- *    messages: {
- *      userId: string,
- *      message: string}[]
- *    }
- *  } A ação que foi escolhida e executada pela função.
+ * @returns {{action: 'IGNORE' | 'CANCEL_CONFESSION' | 'CONFESS', messages: { userId: string, message: string, timestamp: number}[]}} A ação que foi escolhida e executada pela função.
  */
 const selectAction = (payload) => {
   const receivedMessagesEvents = payload.direct_message_events?.filter(
@@ -38,6 +31,7 @@ const selectAction = (payload) => {
     messages: receivedMessagesEvents.map((event) => ({
       userId: event.message_create.sender_id,
       message: event.message_create.message_data.text,
+      timestamp: parseInt(event.created_timestamp),
     })),
   }
 }

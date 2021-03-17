@@ -3,6 +3,13 @@
 const AWS = require('aws-sdk')
 const dynamoDb = new AWS.DynamoDB.DocumentClient()
 const { crcChallenge } = require('./auth')
+const {
+  alreadyInQueue,
+  addMessageToConfession,
+} = require('./dynamo/messageStorage')
+const { selectAction } = require('./processMessages')
+
+const messageTableName = process.env.MESSAGES_TABLE
 
 module.exports.twitterHandler = async (event, context, callback) => {
   // Logs the event just to verify latter
@@ -26,7 +33,39 @@ module.exports.twitterHandler = async (event, context, callback) => {
     response.direct_message_events.length > 0
   ) {
     // TODO: melhorar o processamento de texto
-    
+    // Obs: Da forma que está implementado pode ocorrer um problema caso venham multiplos ids em uma única chamada
+    const actionPayload = selectAction(response)
+    if (actionPayload.action === 'CONFESS') {
+      const ongoingConfession = alreadyInQueue(
+        response.for_user_id,
+        messageTableName,
+        dynamoDb
+      )
+
+      if (!ongoingConfession) {
+        const timestamp = actionPayload.messages
+          .map((event) => event.timestamp)
+          .reduce((prev, current) => (current < prev ? current : prev))
+
+        pushToQueue({
+          userId: actionPayload.messages[0].userId,
+          timestamp: timestamp,
+        })
+      }
+
+      const confessionPromises = actionPayload.messages.map((message) =>
+        addMessageToConfession(
+          message.message,
+          message.timestamp,
+          message.userId,
+          messageTableName,
+          dynamoDb
+        )
+      )
+    } else if (actionPayload.action === 'CANCEL_CONFESSION') {
+      const userId = actionPayload.messages[0].userId
+      cancelConfession(userId, messageTableName, dynamoDb)
+    }
   } else {
     callback(null, response)
     return
