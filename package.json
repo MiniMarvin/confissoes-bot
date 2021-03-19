@@ -1,0 +1,28 @@
+{
+  "name": "indiretas-api",
+  "version": "1.0.0",
+  "description": "Um serviço que funciona para você postar mensagens no twitter de forma anônima.",
+  "main": "src/handler.js",
+  "dependencies": {
+    "aws-sdk": "^2.867.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MiniMarvin/indiretas-api.git"
+  },
+  "keywords": [
+    "serverless",
+    "twitter",
+    "chatbot"
+  ],
+  "author": "Caio Gomes",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MiniMarvin/indiretas-api/issues"
+  },
+  "homepage": "https://github.com/MiniMarvin/indiretas-api#readme"
+}
