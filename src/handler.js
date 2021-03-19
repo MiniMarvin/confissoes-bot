@@ -5,11 +5,14 @@ const dynamoDb = new AWS.DynamoDB.DocumentClient()
 const { crcChallenge } = require('./auth')
 const {
   alreadyInQueue,
-  addMessageToConfession,
+  addMessagesToConfession,
+  addConfession,
 } = require('./dynamo/messageStorage')
 const { selectAction } = require('./processMessages')
+const { pushToQueue } = require('./sqs/manageQueue')
 
 const messageTableName = process.env.MESSAGES_TABLE
+console.log('messages table: ', messageTableName)
 
 module.exports.twitterHandler = async (event, context, callback) => {
   // Logs the event just to verify latter
@@ -27,44 +30,61 @@ module.exports.twitterHandler = async (event, context, callback) => {
     ),
   }
 
+  const request = JSON.parse(event.body)
+
   // validate if the event is DM message event, otherwise ignore.
-  if (
-    response.direct_message_events != null &&
-    response.direct_message_events.length > 0
-  ) {
+  if (request.direct_message_events?.length > 0) {
     // TODO: melhorar o processamento de texto
     // Obs: Da forma que está implementado pode ocorrer um problema caso venham multiplos ids em uma única chamada
-    const actionPayload = selectAction(response)
+    console.log('selecting action')
+    const actionPayload = selectAction(request)
+    const userId = request.for_user_id
+
     if (actionPayload.action === 'CONFESS') {
-      const ongoingConfession = alreadyInQueue(
-        response.for_user_id,
+      console.log('detected confession')
+      const ongoingConfession = await alreadyInQueue(
+        userId,
         messageTableName,
         dynamoDb
       )
+
+      console.log('has ongoing confession?', ongoingConfession)
 
       if (!ongoingConfession) {
         const timestamp = actionPayload.messages
           .map((event) => event.timestamp)
           .reduce((prev, current) => (current < prev ? current : prev))
 
+        console.log('pushing to queue...')
         pushToQueue({
           userId: actionPayload.messages[0].userId,
           timestamp: timestamp,
         })
-      }
 
-      const confessionPromises = actionPayload.messages.map((message) =>
-        addMessageToConfession(
-          message.message,
-          message.timestamp,
-          message.userId,
+        console.log('adding confession...')
+        addConfession(
+          actionPayload.messages,
+          userId,
+          timestamp,
           messageTableName,
           dynamoDb
         )
-      )
+      } else {
+        console.log('adding messages to confession...')
+
+        await addMessagesToConfession(
+          actionPayload.messages,
+          userId,
+          messageTableName,
+          dynamoDb
+        )
+      }
     } else if (actionPayload.action === 'CANCEL_CONFESSION') {
+      console.log('canceling confession')
       const userId = actionPayload.messages[0].userId
-      cancelConfession(userId, messageTableName, dynamoDb)
+      await cancelConfession(userId, messageTableName, dynamoDb)
+    } else {
+      console.log('ignoring confession')
     }
   } else {
     callback(null, response)
@@ -108,67 +128,3 @@ module.exports.status = async (event, context, callback) => {
 
   callback(null, response)
 }
-
-module.exports.createPost = async (event, context, callback) => {
-  const requestBody = JSON.parse(event.body)
-  const text = requestBody.text
-
-  if (!text) {
-    const response = {
-      statusCode: 400,
-      body: JSON.stringify({
-        message: 'text message must not be null',
-        input: event,
-      }),
-    }
-
-    callback(response, null)
-  }
-
-  // TODO: auth the user to make a post or use recaptcha to avoid bots
-  // TODO: integrate with the tweeter api to send a tweet in the account
-
-  const date = new Date().toISOString()
-  const tableData = {
-    TableName: process.env.MESSAGES_TABLE,
-    Item: {
-      date: date,
-      text: text,
-      userId: '',
-      tweetId: '',
-    },
-  }
-
-  try {
-    await dynamoDb.put(tableData).promise()
-  } catch (err) {
-    console.trace(err)
-    const response = {
-      statusCode: 500,
-      body: JSON.stringify({
-        message: err,
-        input: event,
-      }),
-    }
-
-    callback(response, null)
-  }
-
-  const response = {
-    statusCode: 200,
-    body: JSON.stringify({
-      message: 'message inserted',
-      input: event,
-    }),
-  }
-
-  callback(null, response)
-}
-
-module.exports.listPostsForUser = async (event, context, callback) => {}
-
-module.exports.getPost = async (event, context, callback) => {
-  // TODO: implement the method to get a post from it's id with security analysis
-}
-
-module.exports.telegramHandler = async (event, context, callback) => {}
