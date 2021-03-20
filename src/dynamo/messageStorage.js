@@ -131,18 +131,22 @@ const addConfession = async (
     },
   }
 
-  const setupPromise = client.update(updateMessageList).promise()
-  const messagesPromise = addMessagesToConfession(
-    messages,
-    userId,
-    tableName,
-    client
-  )
-
+  
   try {
-    const responses = await Promise.all([setupPromise, messagesPromise])
+    const setupPromise = client.update(updateMessageList).promise()
+    const setupResponse = await setupPromise
+    
+    const messagesPromise = addMessagesToConfession(
+      messages,
+      userId,
+      tableName,
+      client
+    )
+    const messagesResponse = await messagesPromise
 
-    console.log(JSON.stringify(responses))
+    console.log(
+      JSON.stringify({ setup: setupResponse, messages: messagesResponse })
+    )
   } catch (err) {
     console.trace(err)
     return false

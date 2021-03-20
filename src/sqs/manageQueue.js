@@ -1,9 +1,19 @@
 /**
  *
  * @param {{userId: string, timestamp: string}} messageData Informações da mensagem que o usuário enviou.
- * @param {AWS.SQS} queue
+ * @param {string} queueUrl
+ * @param {AWS.SQS} sqs
  */
-const pushToQueue = (messageData, queue) => {}
+const pushToQueue = (messageData, queueUrl, sqs) => {
+  const params = {
+    // Remove DelaySeconds parameter and value for FIFO queues
+    DelaySeconds: 10,
+    MessageBody: JSON.stringify(messageData),
+    QueueUrl: queueUrl,
+  }
+
+  return sqs.sendMessage(params).promise()
+}
 
 module.exports = {
   pushToQueue,

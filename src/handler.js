@@ -10,6 +10,8 @@ const {
 } = require('./dynamo/messageStorage')
 const { selectAction } = require('./processMessages')
 const { pushToQueue } = require('./sqs/manageQueue')
+// Create an SQS service object
+const sqs = new AWS.SQS({ apiVersion: '2012-11-05' })
 
 const messageTableName = process.env.MESSAGES_TABLE
 console.log('messages table: ', messageTableName)
@@ -17,19 +19,6 @@ console.log('messages table: ', messageTableName)
 module.exports.twitterHandler = async (event, context, callback) => {
   // Logs the event just to verify latter
   console.log(JSON.stringify(event))
-
-  const response = {
-    statusCode: 200,
-    body: JSON.stringify(
-      {
-        message: 'Ok!',
-        input: event,
-      },
-      null,
-      2
-    ),
-  }
-
   const request = JSON.parse(event.body)
 
   // validate if the event is DM message event, otherwise ignore.
@@ -55,11 +44,22 @@ module.exports.twitterHandler = async (event, context, callback) => {
           .map((event) => event.timestamp)
           .reduce((prev, current) => (current < prev ? current : prev))
 
-        console.log('pushing to queue...')
-        pushToQueue({
-          userId: actionPayload.messages[0].userId,
-          timestamp: timestamp,
-        })
+        const queueUrl = process.env.CONFESSIONS_QUEUE_URL
+        console.log(`pushing to queue with url: ${queueUrl}...`)
+        pushToQueue(
+          {
+            userId: actionPayload.messages[0].userId,
+            timestamp: timestamp,
+          },
+          queueUrl,
+          sqs
+        )
+          .then((res) => {
+            console.log('message insert in queue:', JSON.stringify(res))
+          })
+          .catch((err) => {
+            console.trace(err)
+          })
 
         console.log('adding confession...')
         addConfession(
@@ -86,9 +86,18 @@ module.exports.twitterHandler = async (event, context, callback) => {
     } else {
       console.log('ignoring confession')
     }
-  } else {
-    callback(null, response)
-    return
+  }
+
+  const response = {
+    statusCode: 200,
+    body: JSON.stringify(
+      {
+        message: 'Ok!',
+        input: event,
+      },
+      null,
+      2
+    ),
   }
 
   callback(null, response)
@@ -130,17 +139,6 @@ module.exports.status = async (event, context, callback) => {
 }
 
 module.exports.processConfession = async (event, context, callback) => {
-  const response = {
-    statusCode: 200,
-    body: JSON.stringify(
-      {
-        message: 'Ok!',
-        input: event,
-      },
-      null,
-      2
-    ),
-  }
-
-  callback(null, response)
+  console.log(JSON.stringify(event))
+  return {}
 }
