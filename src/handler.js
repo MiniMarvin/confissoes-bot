@@ -128,3 +128,19 @@ module.exports.status = async (event, context, callback) => {
 
   callback(null, response)
 }
+
+module.exports.processConfession = async (event, context, callback) => {
+  const response = {
+    statusCode: 200,
+    body: JSON.stringify(
+      {
+        message: 'Ok!',
+        input: event,
+      },
+      null,
+      2
+    ),
+  }
+
+  callback(null, response)
+}

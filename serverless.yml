@@ -32,6 +32,8 @@ provider:
   region: us-east-1
   environment:
     MESSAGES_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+    CONFESSIONS_QUEUE: ${self:service}-${opt:stage, self:provider.stage}
+    CONFESSIONS_QUEUE_DLQ: ${self:service}-${opt:stage, self:provider.stage}-dlq
   iamRoleStatements:
     - Effect: "Allow"
       Action:
@@ -80,14 +82,6 @@ functions:
       - http:
           path: status
           method: get
-  createPost:
-    handler: src/handler.createPost
-    memorySize: 128
-    description: Cria uma mensagem anonima
-    events:
-      - http:
-          path: createPost
-          method: post
   twitterHandler:
     handler: src/handler.twitterHandler
     memorySize: 128
@@ -104,6 +98,14 @@ functions:
       - http:
           path: webhooks/twitter
           method: get
+  processConfession:
+    handler: handler.processConfession
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - ConfessionsQueue
+              - Arn
   
 # you can add CloudFormation resource templates here
 resources:
@@ -126,6 +128,21 @@ resources:
         StreamSpecification:
           StreamViewType: "NEW_AND_OLD_IMAGES"
         TableName: ${self:provider.environment.MESSAGES_TABLE}
+    ConfessionsQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:provider.environment.CONFESSIONS_QUEUE}
+        DelaySeconds: 10
+        RedrivePolicy:
+          deadLetterTargetArn: 
+            Fn::GetAtt:
+              - ConfessionsQueueDLQ
+              - Arn
+          maxReceiveCount: 1
+    ConfessionsQueueDLQ:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: ${self:provider.environment.CONFESSIONS_QUEUE_DLQ}
   Outputs:
     NewOutput:
       Description: "Description for the output"
