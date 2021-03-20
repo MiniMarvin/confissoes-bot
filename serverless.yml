@@ -16,8 +16,8 @@ service: indiretas-anonimas
 # app and org for use with dashboard.serverless.com
 app: indiretas-anonimas
 org: minimarvin
-# plugins:
-#   - serverless-dotenv-plugin
+plugins:
+  - serverless-dotenv-plugin
 
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
@@ -34,16 +34,18 @@ provider:
     MESSAGES_TABLE: ${self:service}-${opt:stage, self:provider.stage}
     CONFESSIONS_QUEUE: ${self:service}-${opt:stage, self:provider.stage}
     CONFESSIONS_QUEUE_DLQ: ${self:service}-${opt:stage, self:provider.stage}-dlq
+    CONFESSIONS_QUEUE_URL: { Ref: ConfessionsQueue }
   iamRoleStatements:
-    - Effect: "Allow"
+    - Effect: 'Allow'
       Action:
         - dynamodb:Query
         - dynamodb:Scan
         - dynamodb:GetItem
         - dynamodb:PutItem
         - dynamodb:UpdateItem
-      Resource: "*"
-    
+        - sqs:SendMessage
+      Resource: '*'
+
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
 #    - Effect: "Allow"
@@ -99,14 +101,14 @@ functions:
           path: webhooks/twitter
           method: get
   processConfession:
-    handler: handler.processConfession
+    handler: src/handler.processConfession
     events:
       - sqs:
           arn:
             Fn::GetAtt:
               - ConfessionsQueue
               - Arn
-  
+
 # you can add CloudFormation resource templates here
 resources:
   Resources:
@@ -115,35 +117,33 @@ resources:
       DeletionPolicy: Retain
       Properties:
         AttributeDefinitions:
-        -
-          AttributeName: id
-          AttributeType: S
+          - AttributeName: id
+            AttributeType: S
         KeySchema:
-        -
-          AttributeName: id
-          KeyType: HASH
+          - AttributeName: id
+            KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
         StreamSpecification:
-          StreamViewType: "NEW_AND_OLD_IMAGES"
+          StreamViewType: 'NEW_AND_OLD_IMAGES'
         TableName: ${self:provider.environment.MESSAGES_TABLE}
     ConfessionsQueue:
-      Type: "AWS::SQS::Queue"
+      Type: 'AWS::SQS::Queue'
       Properties:
         QueueName: ${self:provider.environment.CONFESSIONS_QUEUE}
         DelaySeconds: 10
         RedrivePolicy:
-          deadLetterTargetArn: 
+          deadLetterTargetArn:
             Fn::GetAtt:
               - ConfessionsQueueDLQ
               - Arn
-          maxReceiveCount: 1
+          maxReceiveCount: 10
     ConfessionsQueueDLQ:
-      Type: "AWS::SQS::Queue"
+      Type: 'AWS::SQS::Queue'
       Properties:
         QueueName: ${self:provider.environment.CONFESSIONS_QUEUE_DLQ}
   Outputs:
     NewOutput:
-      Description: "Description for the output"
-      Value: "Some output value"
+      Description: 'Description for the output'
+      Value: 'Some output value'
