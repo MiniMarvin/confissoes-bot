@@ -47,13 +47,41 @@ const alreadyInQueue = async (userId, tableName, client) => {
 /**
  * Atualiza a tabela de um usuário para colocar um post realizado em uma
  *
- * @param {string} usersData Id do usuários no twitter.
+ * @param {any} confessionaData Objeto contendo os dados do usuário
  * @param {string} tableName Nome da tabela de usuários no dynamo.
  * @param {AWS.DynamoDB.DocumentClient} client Cliente de acesso do dynamo.
  * @returns {Promise<boolean>}
  */
-const markMessagesSent = (userId, tableName, client) => {
-  client.get()
+const finishConfession = (confessionData, tableName, client) => {
+  if (!confessionData.confessionMessages || confessionData.confessionMessages.length === 0) return false
+  const timestamp = new Date().getTime()
+  const params = {
+    TableName: tableName,
+    Key: {
+      id: confessionData.id,
+    },
+    UpdateExpression:
+      'SET #previousConfessions = list_append(if_not_exists(#previousConfessions, :empty_list), :confessionData), #messageList = :empty_list, #hasConfession = :hasConfession, #timestamp = :timestamp',
+    ExpressionAttributeNames: {
+      '#previousConfessions': 'previousConfessions',
+      '#messageList': 'confessionMessages',
+      '#timestamp': 'confessionTimestamp',
+      '#hasConfession': 'hasConfession',
+    },
+    ExpressionAttributeValues: {
+      ':confessionData': [
+        {
+          finishTimestamp: timestamp,
+          confession: confessionData.confessionMessages,
+        },
+      ],
+      ':empty_list': [],
+      ':timestamp': -1,
+      ':hasConfession': false,
+    },
+  }
+
+  return client.update(params).promise()
 }
 
 /**
@@ -121,9 +149,10 @@ const addConfession = async (
       id: userId,
     },
     UpdateExpression:
-      'SET #timestamp = :timestamp, hasConfession = :hasConfession',
+      'SET #timestamp = :timestamp, #hasConfession = :hasConfession',
     ExpressionAttributeNames: {
       '#timestamp': 'confessionTimestamp',
+      '#hasConfession': 'hasConfession',
     },
     ExpressionAttributeValues: {
       ':timestamp': timestamp,
@@ -201,7 +230,7 @@ const cancelConfession = async (userId, tableName, client) => {
 module.exports = {
   retrieveConfessionDataForUsers,
   alreadyInQueue,
-  markMessagesSent,
+  finishConfession,
   addMessagesToConfession,
   addConfession,
   cancelConfession,

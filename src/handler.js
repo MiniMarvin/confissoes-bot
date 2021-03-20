@@ -7,6 +7,7 @@ const {
   alreadyInQueue,
   addMessagesToConfession,
   addConfession,
+  retrieveConfessionDataForUsers,
 } = require('./dynamo/messageStorage')
 const { selectAction } = require('./processMessages')
 const { pushToQueue } = require('./sqs/manageQueue')
@@ -142,8 +143,27 @@ module.exports.processConfession = async (event, context, callback) => {
   console.log(JSON.stringify(event))
 
   // TODO: get the message from the database, clean it and post the confession in the feed from twitter
-  // TODO: improve the Post from the confession by making an image with the baloons
-  
+  // TODO: improve the Post from the confession by making an image with the chat baloons
+  /**
+   * @type {{userId: string, timestamp: number}}
+   */
+  const messageData = JSON.parse(event.body)
+  const userDataPack = await retrieveConfessionDataForUsers(
+    messageData.userId,
+    messageTableName,
+    dynamoDb
+  )
+  const userData = userDataPack.Item
 
+  // match the timestamp
+  if (
+    userData.hasConfession &&
+    userData.confessionTimestamp == messageData.timestamp
+  ) {
+    // TODO: post to twitter
+    console.log('confession data:', JSON.stringify(userData.confessionMessages))
+
+    // TODO: remove the confession data from the database
+  }
   return {}
 }
