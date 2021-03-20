@@ -140,5 +140,10 @@ module.exports.status = async (event, context, callback) => {
 
 module.exports.processConfession = async (event, context, callback) => {
   console.log(JSON.stringify(event))
+
+  // TODO: get the message from the database, clean it and post the confession in the feed from twitter
+  // TODO: improve the Post from the confession by making an image with the baloons
+  
+
   return {}
 }

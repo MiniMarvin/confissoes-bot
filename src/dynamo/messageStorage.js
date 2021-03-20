@@ -3,22 +3,20 @@ const AWS = require('aws-sdk')
 /**
  * Recupera as confissões de usuário.
  *
- * @param {string[]} userIds Ids dos usuários no twitter.
+ * @param {string} userId Id do usuário no twitter.
  * @param {string} tableName Nome da tabela de usuários no dynamo.
  * @param {AWS.DynamoDB.DocumentClient} client Cliente de acesso do dynamo.
  * @returns {Promise<PromiseResult<AWS.DynamoDB.DocumentClient.BatchGetItemOutput, AWS.AWSError>>}
  */
-const retrieveConfessionDataForUsers = (userIds, tableName, client) => {
+const retrieveConfessionDataForUsers = (userId, tableName, client) => {
   const params = {
-    RequestItems: {},
+    Key: {
+      id: userId,
+    },
+    TableName: tableName,
   }
 
-  params.RequestItems[tableName] = {
-    Keys: userIds.map((userId) => ({ id: { S: userId } })),
-    ProjectionExpression: 'KEY_NAME, ATTRIBUTE',
-  }
-
-  return client.batchGet(params).promise()
+  return client.get(params).promise()
 }
 
 /**
@@ -49,12 +47,14 @@ const alreadyInQueue = async (userId, tableName, client) => {
 /**
  * Atualiza a tabela de um usuário para colocar um post realizado em uma
  *
- * @param {AWS.DynamoDB.DocumentClient.BatchGetItemOutput[]} usersData Ids dos usuários no twitter.
+ * @param {string} usersData Id do usuários no twitter.
  * @param {string} tableName Nome da tabela de usuários no dynamo.
  * @param {AWS.DynamoDB.DocumentClient} client Cliente de acesso do dynamo.
- * @returns {Promise<PromiseResult<AWS.DynamoDB.DocumentClient.BatchGetItemOutput, AWS.AWSError>>}
+ * @returns {Promise<boolean>}
  */
-const markMessagesSent = (usersData, tableName, client) => {}
+const markMessagesSent = (userId, tableName, client) => {
+  client.get()
+}
 
 /**
  * Insere uma mensagem a uma lista de confissões do usuário.
@@ -131,11 +131,10 @@ const addConfession = async (
     },
   }
 
-  
   try {
     const setupPromise = client.update(updateMessageList).promise()
     const setupResponse = await setupPromise
-    
+
     const messagesPromise = addMessagesToConfession(
       messages,
       userId,
