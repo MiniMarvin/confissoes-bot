@@ -8,7 +8,7 @@ const AWS = require('aws-sdk')
  * @param {AWS.DynamoDB.DocumentClient} client Cliente de acesso do dynamo.
  * @returns {Promise<PromiseResult<AWS.DynamoDB.DocumentClient.BatchGetItemOutput, AWS.AWSError>>}
  */
-const retrieveConfessionDataForUsers = (userId, tableName, client) => {
+const retrieveConfessionDataForUser = (userId, tableName, client) => {
   const params = {
     Key: {
       id: userId,
@@ -42,46 +42,6 @@ const alreadyInQueue = async (userId, tableName, client) => {
     console.trace(err)
     return false
   }
-}
-
-/**
- * Atualiza a tabela de um usuário para colocar um post realizado em uma
- *
- * @param {any} confessionaData Objeto contendo os dados do usuário
- * @param {string} tableName Nome da tabela de usuários no dynamo.
- * @param {AWS.DynamoDB.DocumentClient} client Cliente de acesso do dynamo.
- * @returns {Promise<boolean>}
- */
-const finishConfession = (confessionData, tableName, client) => {
-  if (!confessionData.confessionMessages || confessionData.confessionMessages.length === 0) return false
-  const timestamp = new Date().getTime()
-  const params = {
-    TableName: tableName,
-    Key: {
-      id: confessionData.id,
-    },
-    UpdateExpression:
-      'SET #previousConfessions = list_append(if_not_exists(#previousConfessions, :empty_list), :confessionData), #messageList = :empty_list, #hasConfession = :hasConfession, #timestamp = :timestamp',
-    ExpressionAttributeNames: {
-      '#previousConfessions': 'previousConfessions',
-      '#messageList': 'confessionMessages',
-      '#timestamp': 'confessionTimestamp',
-      '#hasConfession': 'hasConfession',
-    },
-    ExpressionAttributeValues: {
-      ':confessionData': [
-        {
-          finishTimestamp: timestamp,
-          confession: confessionData.confessionMessages,
-        },
-      ],
-      ':empty_list': [],
-      ':timestamp': -1,
-      ':hasConfession': false,
-    },
-  }
-
-  return client.update(params).promise()
 }
 
 /**
@@ -184,6 +144,51 @@ const addConfession = async (
 }
 
 /**
+ * Atualiza a tabela de um usuário para colocar um post realizado em uma
+ *
+ * @param {any} confessionaData Objeto contendo os dados do usuário
+ * @param {string} tableName Nome da tabela de usuários no dynamo.
+ * @param {AWS.DynamoDB.DocumentClient} client Cliente de acesso do dynamo.
+ * @returns {Promise<boolean>}
+ */
+ const finishConfession = (confessionData, tableName, client) => {
+  if (
+    !confessionData.confessionMessages ||
+    confessionData.confessionMessages.length === 0
+  )
+    return false
+  const timestamp = new Date().getTime()
+  const params = {
+    TableName: tableName,
+    Key: {
+      id: confessionData.id,
+    },
+    UpdateExpression:
+      'SET #previousConfessions = list_append(if_not_exists(#previousConfessions, :empty_list), :confessionData), #messageList = :empty_list, #hasConfession = :hasConfession, #timestamp = :timestamp',
+    ExpressionAttributeNames: {
+      '#previousConfessions': 'previousConfessions',
+      '#messageList': 'confessionMessages',
+      '#timestamp': 'confessionTimestamp',
+      '#hasConfession': 'hasConfession',
+    },
+    ExpressionAttributeValues: {
+      ':confessionData': [
+        {
+          finishTimestamp: timestamp,
+          confession: confessionData.confessionMessages,
+        },
+      ],
+      ':empty_list': [],
+      ':timestamp': -1,
+      ':hasConfession': false,
+    },
+  }
+
+  return client.update(params).promise()
+}
+
+
+/**
  * Cancela a confissão realizada por um usuário.
  *
  * @param {string} userId O id do usuário no twitter.
@@ -196,24 +201,34 @@ const cancelConfession = async (userId, tableName, client) => {
   // Desabilita todas as flags que indicam que o documento tem uma confissão em andamento
   // e o identificador de timestamp para o andamento daquela confissão através de uma
   // fila do SQS.
+  
+  const confessionData = await retrieveConfessionDataForUser(userId, tableName, client)
+  const timestamp = new Date().getTime()
+  canceledConfession = [
+    {
+      cancelTimestamp: timestamp,
+      confession: confessionData?.Item?.confessionMessages || [],
+    }
+  ]
+
   const updateMessageList = {
     TableName: tableName,
     Key: {
-      id: {
-        S: userId,
-      },
+      id: userId,
     },
     UpdateExpression:
-      'SET #messageList = :empty_list, #canceledConfessions = list_append(if_not_exists(:messageList, :empty_list), :vals), hasConfession = :hasConfession, confessionTimestamp = :timestamp',
-    ExpressionAttributeNames: {},
+      'SET #messageList = :empty_list, #canceledConfessions = list_append(if_not_exists(#canceledConfessions, :empty_list), :vals), #hasConfession = :hasConfession, #timestamp = :timestamp',
+    ExpressionAttributeNames: {
+      '#messageList': 'confessionMessages',
+      '#canceledConfessions': 'canceledConfessions',
+      '#hasConfession': 'hasConfession',
+      '#timestamp': 'confessionTimestamp'
+    },
     ExpressionAttributeValues: {
-      ':vals': {
-        L: cancelledConfessions,
-      },
-      ':empty_list': { L: [] },
+      ':vals': canceledConfession,
+      ':empty_list': [],
       ':hasConfession': false,
       ':timestamp': -1,
-      ':messageList': { L: 'confessionMessages' },
     },
   }
 
@@ -228,7 +243,7 @@ const cancelConfession = async (userId, tableName, client) => {
 }
 
 module.exports = {
-  retrieveConfessionDataForUsers,
+  retrieveConfessionDataForUser,
   alreadyInQueue,
   finishConfession,
   addMessagesToConfession,
