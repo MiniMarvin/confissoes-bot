@@ -1,8 +1,9 @@
 const AWS = require('aws-sdk')
 const {
   addConfession,
-  retrieveConfessionDataForUsers,
+  retrieveConfessionDataForUser,
   finishConfession,
+  cancelConfession,
 } = require('../dynamo/messageStorage')
 const dynamoDb = new AWS.DynamoDB.DocumentClient({ region: 'us-east-1' })
 
@@ -26,18 +27,22 @@ const testInsertion = async () => {
 }
 
 const testGet = async () => {
-  return await retrieveConfessionDataForUsers('test123', tableName, dynamoDb)
+  return await retrieveConfessionDataForUser(userId, tableName, dynamoDb)
 }
 
 const testFinish = async () => {
-  const data = await retrieveConfessionDataForUsers(
-    'test123',
+  const data = await retrieveConfessionDataForUser(
+    userId,
     tableName,
     dynamoDb
   )
   const finish = await finishConfession(data.Item, tableName, dynamoDb)
   console.log(finish)
   return finish
+}
+
+const testCancel = async () => {
+  return cancelConfession(userId, tableName, dynamoDb)
 }
 
 // TODO: transform in a real test with local database
@@ -47,8 +52,14 @@ const main = async () => {
   const res = await testGet()
   console.log(JSON.stringify(res, null, 2))
 
-  const finish = await testFinish()
-  console.log(finish)
+  // const finish = await testFinish()
+  // console.log(finish)
+
+  const cancel = await testCancel()
+  console.log(cancel)
+
+  const res1 = await testGet()
+  console.log(JSON.stringify(res1, null, 2))
 }
 
 main()
