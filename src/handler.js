@@ -7,7 +7,9 @@ const {
   alreadyInQueue,
   addMessagesToConfession,
   addConfession,
-  retrieveConfessionDataForUsers,
+  retrieveConfessionDataForUser,
+  finishConfession,
+  cancelConfession,
 } = require('./dynamo/messageStorage')
 const { selectAction } = require('./processMessages')
 const { pushToQueue } = require('./sqs/manageQueue')
@@ -27,8 +29,10 @@ module.exports.twitterHandler = async (event, context, callback) => {
     // TODO: melhorar o processamento de texto
     // Obs: Da forma que está implementado pode ocorrer um problema caso venham multiplos ids em uma única chamada
     console.log('selecting action')
+    // TODO: validate if the userId is from the page, if so ignore and return imediately.
     const actionPayload = selectAction(request)
-    const userId = request.for_user_id
+    console.log(JSON.stringify(actionPayload))
+    const userId = actionPayload.messages[0].userId
 
     if (actionPayload.action === 'CONFESS') {
       console.log('detected confession')
@@ -49,7 +53,7 @@ module.exports.twitterHandler = async (event, context, callback) => {
         console.log(`pushing to queue with url: ${queueUrl}...`)
         pushToQueue(
           {
-            userId: actionPayload.messages[0].userId,
+            userId: userId,
             timestamp: timestamp,
           },
           queueUrl,
@@ -147,13 +151,15 @@ module.exports.processConfession = async (event, context, callback) => {
   /**
    * @type {{userId: string, timestamp: number}}
    */
-  const messageData = JSON.parse(event.body)
-  const userDataPack = await retrieveConfessionDataForUsers(
+  const messageData = JSON.parse(event.Records[0].body)
+  const userDataPack = await retrieveConfessionDataForUser(
     messageData.userId,
     messageTableName,
     dynamoDb
   )
   const userData = userDataPack.Item
+
+  console.log(JSON.stringify(userData))
 
   // match the timestamp
   if (
@@ -162,8 +168,7 @@ module.exports.processConfession = async (event, context, callback) => {
   ) {
     // TODO: post to twitter
     console.log('confession data:', JSON.stringify(userData.confessionMessages))
-
-    // TODO: remove the confession data from the database
+    await finishConfession(userData, messageTableName, dynamoDb)
   }
   return {}
 }

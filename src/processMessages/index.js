@@ -23,7 +23,14 @@ const selectAction = (payload) => {
     .reduce((prev, current) => prev || current, false)
 
   if (shouldCancelConfession) {
-    return { action: 'CANCEL_CONFESSION' }
+    return {
+      action: 'CANCEL_CONFESSION',
+      messages: receivedMessagesEvents.map((event) => ({
+        userId: event.message_create.sender_id,
+        message: event.message_create.message_data.text,
+        timestamp: parseInt(event.created_timestamp),
+      })),
+    }
   }
 
   return {

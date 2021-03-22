@@ -132,13 +132,13 @@ resources:
       Type: 'AWS::SQS::Queue'
       Properties:
         QueueName: ${self:provider.environment.CONFESSIONS_QUEUE}
-        DelaySeconds: 10
+        DelaySeconds: 30
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt:
               - ConfessionsQueueDLQ
               - Arn
-          maxReceiveCount: 10
+          maxReceiveCount: 4
     ConfessionsQueueDLQ:
       Type: 'AWS::SQS::Queue'
       Properties:
