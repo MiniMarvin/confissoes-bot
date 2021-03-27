@@ -18,13 +18,6 @@ const { default: Twitter } = require('twitter-lite')
 // Create an SQS service object
 const sqs = new AWS.SQS({ apiVersion: '2012-11-05' })
 
-const twitterClient = Twitter({
-  consumer_key: process.env.TWITTER_CONSUMER_API_KEY,
-  consumer_secret: process.env.TWITTER_CONSUMER_API_SECRET,
-  access_token_key: process.env.TWITTER_ACCESS_TOKEN,
-  access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
-})
-
 const messageTableName = process.env.MESSAGES_TABLE
 console.log('messages table: ', messageTableName)
 
