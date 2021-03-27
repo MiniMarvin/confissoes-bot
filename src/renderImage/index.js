@@ -27,11 +27,12 @@ let font = null
   }} bubbleInfo O texto que deve ser renderizado na bolha.
  * @param {number} x A posição x inicial.
  * @param {number} y A posição y inicial.
- * @param {number} padding A posição y inicial.
+ * @param {number} padding O padding interno da bolha.
+ * @param {number} fontSize O tamanho da fonte.
  * @param {boolean} isFirst Verifica se é uma mensagem inicial.
  * @param {Context} ctx O contexto em que precisa ser renderizado.
  */
-const renderMessage = async (bubbleInfo, x, y, padding, isFirst, ctx) => {
+const renderMessage = async (bubbleInfo, x, y, padding, fontSize, isFirst, ctx) => {
   ctx.fillStyle = 'rgba(66,83,99,1)'
   const margin = x
 
@@ -70,7 +71,7 @@ const renderMessage = async (bubbleInfo, x, y, padding, isFirst, ctx) => {
     )
 
   ctx.fillStyle = '#ffffff'
-  ctx.font = `${24}pt 'Roboto'`
+  ctx.font = `${fontSize}pt 'Roboto'`
   // TODO: setup the messages that stay in each part of the message
   bubbleInfo.lines.forEach((line) => {
     console.log(
@@ -91,12 +92,12 @@ const renderMessage = async (bubbleInfo, x, y, padding, isFirst, ctx) => {
  * @param {string[]} messages Lista de mensagens a ser colocadas em bolhas
  */
 const renderConfession = async (messages) => {
-  const fontSize = 24
-  const maxWidth = 580
-  const bubblePadding = 15
-  const bubbleSpacing = 5
-  const horizontalPadding = 15
-  const verticalPadding = 30
+  const fontSize = 36
+  const maxWidth = 960
+  const bubblePadding = 30
+  const bubbleSpacing = 10
+  const horizontalPadding = 30
+  const verticalPadding = 60
 
   if (!font) font = await loadFont(fontPath)
   const canvasInfo = computeCanvas(
@@ -126,7 +127,7 @@ const renderConfession = async (messages) => {
 
   for (let i = 0; i < canvasInfo.bubbles.length; i++) {
     const bubbleInfo = canvasInfo.bubbles[i]
-    await renderMessage(bubbleInfo, startx, starty, bubblePadding, i === 0, ctx, fontSize)
+    await renderMessage(bubbleInfo, startx, starty, bubblePadding, fontSize, i === 0, ctx, fontSize)
     starty += bubbleInfo.height + bubbleSpacing
   }
 
