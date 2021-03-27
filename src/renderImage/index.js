@@ -3,7 +3,7 @@ const opentype = require('opentype.js')
 const stream = require('stream')
 const fs = require('fs')
 const pathModule = require('path')
-const { measureText } = require('./textRender')
+const { measureText, loadFont } = require('./textRender')
 
 const borderRadius = 20
 
@@ -47,9 +47,10 @@ const renderConfession = async (messages) => {
   ctx.fillStyle = 'rgba(23,31,42,1)'
   ctx.fillRect(0, 0, width, height)
 
-  const font = await setFont(
-    pathModule.resolve(__dirname, '../assets/Roboto-Regular.ttf')
-  )
+  const fontPath = pathModule.resolve(__dirname, '../assets/Roboto-Regular.ttf')
+  const setFontContextPromise = setFont(fontPath)
+  const font = await loadFont(fontPath)
+  await setFontContextPromise
   const fontSize = 24
 
   for (let text of messages) {
@@ -71,7 +72,7 @@ const renderConfession = async (messages) => {
 /**
  * Promise para realizar a definição de uma fonte no pureImage.
  *
- * @returns {Promise<opentype.Font>}
+ * @returns {Promise<void>}
  */
 const setFont = async (path) => {
   let font = null
@@ -81,16 +82,8 @@ const setFont = async (path) => {
     try {
       // Register the font in the pureImage lib
       const fnt = pimage.registerFont(path)
-      fnt.load(() => {})
-
-      // Register the font in the local font management so we can compute
-      // the size of the text, in the future make a PR to the pureImage lib
-      // in order to allow the users to simply ask the ctx the size that
-      // the text will occupy.
-      opentype.load(path, function (err, loadedFont) {
-        if (err) reject(err)
-        font = loadedFont
-        resolve(font)
+      fnt.load(() => {
+        resolve()
       })
     } catch (err) {
       reject(err)
