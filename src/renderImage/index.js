@@ -1,18 +1,20 @@
 const pimage = require('pureimage')
+const opentype = require('opentype.js')
 const stream = require('stream')
 const fs = require('fs')
+const pathModule = require('path')
 
 const borderRadius = 20
 
 /**
  * Renderiza uma mensagem em uma bolha no board.
- * 
+ *
  * @param {string} text O texto que deve ser renderizado na bolha.
  * @param {number} y A posição y inicial.
  * @param {boolean} start Verifica se é uma mensagem inicial.
  * @param {Context} ctx O contexto em que precisa ser renderizado.
  */
-const renderMessage = async (text, y, start, ctx) => {
+const renderMessage = async (text, y, start, ctx, fontSize = 24) => {
   ctx.fillStyle = 'rgba(66,83,99,1)'
 
   // TODO: compute bubble width
@@ -21,9 +23,9 @@ const renderMessage = async (text, y, start, ctx) => {
   const bubbleHeight = 60
   if (start) drawChatBubble(15, y, bubbleWidth, bubbleHeight, borderRadius, ctx)
   else drawMidBubble(15, y, 420, 60, 20, ctx)
-  
+
   ctx.fillStyle = '#ffffff'
-  ctx.font = "18pt 'Roboto'"
+  ctx.font = `${24}pt 'Roboto'`
   // TODO: setup the messages that stay in each part of the message
   const parts = [text]
   for (let p of parts) {
@@ -32,8 +34,32 @@ const renderMessage = async (text, y, start, ctx) => {
 }
 
 /**
- * Renderiza uma lista de mensagens como se fossem mensagens do twitter. 
- * 
+ * Measure text size
+ *
+ * @param {string} text The name to give the font
+ * @param {opentype.Font} font The font that is being used
+ * @param {number} fontSize The number of points in the font
+ *
+ * @returns {{width: number, emHeightAscent: number, emHeightDescent: number}}}
+ */
+const measureText = (text, font, fontSize) => {
+  const fsize = fontSize
+  const glyphs = font.stringToGlyphs(text)
+  let advance = 0
+  glyphs.forEach((g) => {
+    advance += g.advanceWidth
+  })
+
+  return {
+    width: (advance / font.unitsPerEm) * fsize,
+    emHeightAscent: (font.ascender / font.unitsPerEm) * fsize,
+    emHeightDescent: (font.descender / font.unitsPerEm) * fsize,
+  }
+}
+
+/**
+ * Renderiza uma lista de mensagens como se fossem mensagens do twitter.
+ *
  * @param {string[]} messages Lista de mensagens a ser colocadas em bolhas
  */
 const renderConfession = async (messages) => {
@@ -44,10 +70,14 @@ const renderConfession = async (messages) => {
   ctx.fillStyle = 'rgba(23,31,42,1)'
   ctx.fillRect(0, 0, width, height)
 
-  await setFont()
+  const font = await setFont(
+    pathModule.resolve(__dirname, '../assets/Roboto-Regular.ttf')
+  )
+  const fontSize = 24
 
   for (let text of messages) {
-    renderMessage(text, 30, true, ctx)
+    console.log('text size:', await measureText(text, font, fontSize))
+    renderMessage(text, 30, true, ctx, fontSize)
   }
 
   // TODO: create in memory stream to output to the twitter api
@@ -61,26 +91,29 @@ const renderConfession = async (messages) => {
     })
 }
 
-const testRender = async () => {
-  const texts = ['oi, tudo bem contigo? queria dizer só que você é legal']
-
-  renderConfession(texts)
-}
-
 /**
- * Promise para realizar a definição de uma fonte no pureImage. 
- * 
- * @returns Promise<void>
+ * Promise para realizar a definição de uma fonte no pureImage.
+ *
+ * @returns {Promise<opentype.Font>}
  */
-const setFont = async () => {
+const setFont = async (path) => {
+  let font = null
+  // get the font with the open type library
+
   return new Promise((resolve, reject) => {
     try {
-      const fnt = pimage.registerFont(
-        '/Users/caiogomes/Documents/projects/channel/indiretas-api/src/assets/Roboto-Regular.ttf',
-        'Roboto'
-      )
-      fnt.load(() => {
-        resolve()
+      // Register the font in the pureImage lib
+      const fnt = pimage.registerFont(path)
+      fnt.load(() => {})
+
+      // Register the font in the local font management so we can compute
+      // the size of the text, in the future make a PR to the pureImage lib
+      // in order to allow the users to simply ask the ctx the size that
+      // the text will occupy.
+      opentype.load(path, function (err, loadedFont) {
+        if (err) reject(err)
+        font = loadedFont
+        resolve(font)
       })
     } catch (err) {
       reject(err)
@@ -90,7 +123,7 @@ const setFont = async () => {
 
 /**
  * Desenha uma bolha de chat inicial do twitter.
- * 
+ *
  * @param {number} x O top left x da bolha.
  * @param {number} y O top left y da bolha.
  * @param {number} width A largura da bolha.
@@ -144,7 +177,7 @@ const drawChatBubble = (x, y, width, height, cornerRadius, ctx) => {
 
 /**
  * Desenha uma bolha de meio de chat do twitter.
- * 
+ *
  * @param {number} x O top left x da bolha.
  * @param {number} y O top left y da bolha.
  * @param {number} width A largura da bolha.
@@ -188,6 +221,12 @@ const drawMidBubble = (x, y, width, height, cornerRadius, ctx) => {
   )
   ctx.closePath()
   ctx.fill()
+}
+
+const testRender = async () => {
+  const texts = ['oi, tudo bem contigo? queria dizer só que você é legal']
+
+  renderConfession(texts)
 }
 
 testRender()
