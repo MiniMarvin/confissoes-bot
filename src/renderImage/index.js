@@ -1,7 +1,10 @@
 const pimage = require('pureimage')
 const opentype = require('opentype.js')
 const stream = require('stream')
-const fs = require('fs')
+// const MemoryFileSystem = require("memory-fs");
+// const fs = require('fs')
+// const fs = new MemoryFileSystem()
+const { fs } = require('memfs')
 const pathModule = require('path')
 const { loadFont } = require('./textRender')
 const { computeBubble, computeCanvas } = require('./compute')
@@ -32,7 +35,15 @@ let font = null
  * @param {boolean} isFirst Verifica se é uma mensagem inicial.
  * @param {Context} ctx O contexto em que precisa ser renderizado.
  */
-const renderMessage = async (bubbleInfo, x, y, padding, fontSize, isFirst, ctx) => {
+const renderMessage = async (
+  bubbleInfo,
+  x,
+  y,
+  padding,
+  fontSize,
+  isFirst,
+  ctx
+) => {
   ctx.fillStyle = 'rgba(66,83,99,1)'
   const margin = x
 
@@ -90,8 +101,9 @@ const renderMessage = async (bubbleInfo, x, y, padding, fontSize, isFirst, ctx) 
  * Renderiza uma lista de mensagens como se fossem mensagens do twitter.
  *
  * @param {string[]} messages Lista de mensagens a ser colocadas em bolhas
+ * @returns {IWriteStream} PNG Image
  */
-const renderConfession = async (messages) => {
+const renderConfession = async (messages, outFileName) => {
   const fontSize = 36
   const maxWidth = 960
   const bubblePadding = 30
@@ -110,8 +122,8 @@ const renderConfession = async (messages) => {
   )
   console.log('canvas info:', canvasInfo)
 
-  const width = canvasInfo.width + 2*bubblePadding
-  const height = canvasInfo.height + 2*verticalPadding
+  const width = canvasInfo.width + 2 * bubblePadding
+  const height = canvasInfo.height + 2 * verticalPadding
 
   const confession = pimage.make(width, height)
   const ctx = confession.getContext('2d')
@@ -127,19 +139,36 @@ const renderConfession = async (messages) => {
 
   for (let i = 0; i < canvasInfo.bubbles.length; i++) {
     const bubbleInfo = canvasInfo.bubbles[i]
-    await renderMessage(bubbleInfo, startx, starty, bubblePadding, fontSize, i === 0, ctx, fontSize)
+    await renderMessage(
+      bubbleInfo,
+      startx,
+      starty,
+      bubblePadding,
+      fontSize,
+      i === 0,
+      ctx,
+      fontSize
+    )
     starty += bubbleInfo.height + bubbleSpacing
   }
 
   // TODO: create in memory stream to output to the twitter api
-  pimage
-    .encodePNGToStream(confession, fs.createWriteStream('out.png'))
-    .then(() => {
-      console.log('wrote out the png file to out.png')
-    })
-    .catch((e) => {
-      console.log('there was an error writing')
-    })
+  let image = fs.createWriteStream(`/${outFileName}.png`)
+  return new Promise((resolve, reject) => {
+    pimage
+      // .encodePNGToStream(confession, fs.createWriteStream('out.png'))
+      .encodePNGToStream(confession, image)
+      .then(() => {
+        console.log('wrote out the png file to out.png')
+        console.log(image)
+        resolve(image)
+      })
+      .catch((e) => {
+        console.log('there was an error writing')
+        console.trace(e)
+        reject(e)
+      })
+  })
 }
 
 /**
