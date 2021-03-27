@@ -100,10 +100,12 @@ const renderMessage = async (
 /**
  * Renderiza uma lista de mensagens como se fossem mensagens do twitter.
  *
- * @param {string[]} messages Lista de mensagens a ser colocadas em bolhas
+ * @param {string[]} messages Lista de mensagens a ser colocadas em bolhas.
+ * @param {string} outFilePath Nome do arquivo de saída no sistema de arquivos.
+ * @param {any} fs O sistema de arquivos que deve ser utilizado.
  * @returns {IWriteStream} PNG Image
  */
-const renderConfession = async (messages, outFileName) => {
+const renderConfession = async (messages, outFilePath, fs) => {
   const fontSize = 36
   const maxWidth = 960
   const bubblePadding = 30
@@ -153,7 +155,7 @@ const renderConfession = async (messages, outFileName) => {
   }
 
   // TODO: create in memory stream to output to the twitter api
-  let image = fs.createWriteStream(`/${outFileName}.png`)
+  let image = fs.createWriteStream(outFilePath)
   return new Promise((resolve, reject) => {
     pimage
       // .encodePNGToStream(confession, fs.createWriteStream('out.png'))
@@ -302,7 +304,7 @@ const testRender = async () => {
     'inclusive eu consigo dar break em textão também haha paosidjfpasodifjsdoifjposdifjaspdoifjsapdofijapsdofijaspdofijsdpfoisfjdiof',
   ]
 
-  renderConfession(texts)
+  renderConfession(texts, '/out.png', fs)
 }
 
 testRender()
