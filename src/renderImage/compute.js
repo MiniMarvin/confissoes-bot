@@ -101,4 +101,40 @@ module.exports.computeBubble = (text, font, fontSize, maxWidth, padding) => {
   }
 }
 
-module.exports.computeCanvas = () => {}
+/**
+ * Calcula o tamanho que um canvas com múltiplas bolhas vai ocupar
+ *
+ * @param {string[]} texts O texto a ser renderizado.
+ * @param {string} font A fonte que o texto vai renderizar.
+ * @param {string} fontSize O texto a ser renderizado.
+ * @param {number} maxWidth Largura máxima que um texto pode ocupar.
+ * @param {number} padding Padding da bolha para o texto.
+ *
+ * @returns {{bubbles: {lines: {text: string, y: number, width: number}[], width: number, height: number}[], width: number, height: number}}
+ */
+module.exports.computeCanvas = (
+  texts,
+  font,
+  fontSize,
+  maxWidth,
+  padding,
+  bubbleSpacing
+) => {
+  const bubbles = texts.map((text) =>
+    this.computeBubble(text, font, fontSize, maxWidth, padding)
+  )
+  const width = bubbles.reduce(
+    (prev, current) => Math.max(prev, current.width),
+    0
+  )
+  const height = bubbles.reduce(
+    (prev, current) => prev + current.height + bubbleSpacing,
+    -bubbleSpacing
+  )
+
+  return {
+    bubbles: bubbles,
+    width: width,
+    height: height,
+  }
+}

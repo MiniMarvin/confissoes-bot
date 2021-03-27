@@ -3,8 +3,8 @@ const opentype = require('opentype.js')
 const stream = require('stream')
 const fs = require('fs')
 const pathModule = require('path')
-const { measureText, loadFont } = require('./textRender')
-const { computeBubble } = require('./compute')
+const { loadFont } = require('./textRender')
+const { computeBubble, computeCanvas } = require('./compute')
 
 const borderRadius = 20
 const fontPath = pathModule.resolve(__dirname, '../assets/Roboto-Regular.ttf')
@@ -16,31 +16,41 @@ let font = null
 /**
  * Renderiza uma mensagem em uma bolha no board.
  *
- * @param {string} text O texto que deve ser renderizado na bolha.
+ * @param {{
+    lines: {
+        text: string;
+        y: number;
+        width: number;
+    }[];
+    width: number;
+    height: number;
+  }} bubbleInfo O texto que deve ser renderizado na bolha.
+ * @param {number} y A posição x inicial.
  * @param {number} y A posição y inicial.
- * @param {boolean} start Verifica se é uma mensagem inicial.
+ * @param {boolean} isFirst Verifica se é uma mensagem inicial.
  * @param {Context} ctx O contexto em que precisa ser renderizado.
  */
-const renderMessage = async (text, y, start, ctx, fontSize = 24) => {
+const renderMessage = async (bubbleInfo, x, y, isFirst, ctx) => {
   ctx.fillStyle = 'rgba(66,83,99,1)'
-
-  const maxWidth = 380
   const padding = 20
-  const margin = 15
+  const margin = x
 
-  if (!font) font = await loadFont(fontPath)
-  const bubbleInfo = await computeBubble(
-    text,
-    font,
-    fontSize,
-    maxWidth,
-    padding
-  )
   console.log('bubble infos:', bubbleInfo)
 
-  console.log('drawing bubble at x:', margin, 'and y:', y, 'and width:', bubbleInfo.width, 'and height:', bubbleInfo.height, 'width borderRadius:', borderRadius)
+  console.log(
+    'drawing bubble at x:',
+    margin,
+    'and y:',
+    y,
+    'and width:',
+    bubbleInfo.width,
+    'and height:',
+    bubbleInfo.height,
+    'width borderRadius:',
+    borderRadius
+  )
 
-  if (start)
+  if (isFirst)
     drawChatBubble(
       margin,
       y,
@@ -81,19 +91,42 @@ const renderMessage = async (text, y, start, ctx, fontSize = 24) => {
  * @param {string[]} messages Lista de mensagens a ser colocadas em bolhas
  */
 const renderConfession = async (messages) => {
-  const width = 640
-  const height = 800
+  const fontSize = 24
+  const maxWidth = 580
+  const bubblePadding = 15
+  const bubbleSpacing = 5
+  const verticalPadding = 30
+
+  if (!font) font = await loadFont(fontPath)
+  const canvasInfo = computeCanvas(
+    messages,
+    font,
+    fontSize,
+    maxWidth,
+    bubblePadding,
+    bubbleSpacing
+  )
+  console.log('canvas info:', canvasInfo)
+
+  const width = canvasInfo.width + 2*bubblePadding
+  const height = canvasInfo.height + 2*verticalPadding
+
   const confession = pimage.make(width, height)
   const ctx = confession.getContext('2d')
+
   ctx.fillStyle = 'rgba(23,31,42,1)'
   ctx.fillRect(0, 0, width, height)
 
   const setFontContextPromise = setFont(fontPath)
   await setFontContextPromise
-  const fontSize = 24
 
-  for (let text of messages) {
-    await renderMessage(text, 30, true, ctx, fontSize)
+  let startx = bubblePadding
+  let starty = verticalPadding
+
+  for (let i = 0; i < canvasInfo.bubbles.length; i++) {
+    const bubbleInfo = canvasInfo.bubbles[i]
+    await renderMessage(bubbleInfo, startx, starty, i === 0, ctx, fontSize)
+    starty += bubbleInfo.height + bubbleSpacing
   }
 
   // TODO: create in memory stream to output to the twitter api
@@ -196,7 +229,7 @@ const drawChatBubble = (x, y, width, height, cornerRadius, ctx) => {
 const drawMidBubble = (x, y, width, height, cornerRadius, ctx) => {
   // draw a bigger rectangle, and 2 other rectangles and 3 circles
   ctx.fillRect(x + cornerRadius, y, width - 2 * cornerRadius, height)
-  ctx.fillRect(x, cornerRadius, cornerRadius, height - 1 * cornerRadius)
+  ctx.fillRect(x, y, cornerRadius, height)
   ctx.fillRect(
     x + width - cornerRadius,
     y + cornerRadius,
@@ -232,7 +265,11 @@ const drawMidBubble = (x, y, width, height, cornerRadius, ctx) => {
 }
 
 const testRender = async () => {
-  const texts = ['oi, tudo bem contigo? queria dizer só que você é legal']
+  const texts = [
+    'oi, tudo bem contigo?',
+    'queria dizer só que você é legal ;D e por isso eu estou deixando essa mensagem aqui assim rsrs...',
+    'inclusive eu consigo dar break em textão também haha paosidjfpasodifjsdoifjposdifjaspdoifjsapdofijapsdofijaspdofijsdpfoisfjdiof',
+  ]
 
   renderConfession(texts)
 }
