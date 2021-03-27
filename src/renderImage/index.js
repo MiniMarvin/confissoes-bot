@@ -166,21 +166,6 @@ const renderMessage = async (
   ctx.fillStyle = 'rgba(66,83,99,1)'
   const margin = x
 
-  console.log('bubble infos:', bubbleInfo)
-
-  console.log(
-    'drawing bubble at x:',
-    margin,
-    'and y:',
-    y,
-    'and width:',
-    bubbleInfo.width,
-    'and height:',
-    bubbleInfo.height,
-    'width borderRadius:',
-    borderRadius
-  )
-
   if (isFirst)
     drawChatBubble(
       margin,
@@ -204,14 +189,6 @@ const renderMessage = async (
   ctx.font = `${fontSize}pt 'Roboto'`
   // TODO: setup the messages that stay in each part of the message
   bubbleInfo.lines.forEach((line) => {
-    console.log(
-      "draw line '",
-      line.text,
-      "' at x:",
-      margin + padding,
-      'and y:',
-      line.y
-    )
     ctx.fillText(line.text, margin + padding, y + line.y)
   })
 }
@@ -241,7 +218,6 @@ module.exports.renderConfession = async (messages, outFilePath, fs) => {
     bubblePadding,
     bubbleSpacing
   )
-  console.log('canvas info:', canvasInfo)
 
   const width = canvasInfo.width + 2 * bubblePadding
   const height = canvasInfo.height + 2 * verticalPadding
@@ -280,13 +256,9 @@ module.exports.renderConfession = async (messages, outFilePath, fs) => {
       // .encodePNGToStream(confession, fs.createWriteStream('out.png'))
       .encodePNGToStream(confession, image)
       .then(() => {
-        console.log('wrote out the png file to out.png')
-        console.log(image)
         resolve(image)
       })
       .catch((e) => {
-        console.log('there was an error writing')
-        console.trace(e)
         reject(e)
       })
   })
