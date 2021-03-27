@@ -25,14 +25,14 @@ let font = null
     width: number;
     height: number;
   }} bubbleInfo O texto que deve ser renderizado na bolha.
- * @param {number} y A posição x inicial.
+ * @param {number} x A posição x inicial.
  * @param {number} y A posição y inicial.
+ * @param {number} padding A posição y inicial.
  * @param {boolean} isFirst Verifica se é uma mensagem inicial.
  * @param {Context} ctx O contexto em que precisa ser renderizado.
  */
-const renderMessage = async (bubbleInfo, x, y, isFirst, ctx) => {
+const renderMessage = async (bubbleInfo, x, y, padding, isFirst, ctx) => {
   ctx.fillStyle = 'rgba(66,83,99,1)'
-  const padding = 20
   const margin = x
 
   console.log('bubble infos:', bubbleInfo)
@@ -95,6 +95,7 @@ const renderConfession = async (messages) => {
   const maxWidth = 580
   const bubblePadding = 15
   const bubbleSpacing = 5
+  const horizontalPadding = 15
   const verticalPadding = 30
 
   if (!font) font = await loadFont(fontPath)
@@ -120,12 +121,12 @@ const renderConfession = async (messages) => {
   const setFontContextPromise = setFont(fontPath)
   await setFontContextPromise
 
-  let startx = bubblePadding
+  let startx = horizontalPadding
   let starty = verticalPadding
 
   for (let i = 0; i < canvasInfo.bubbles.length; i++) {
     const bubbleInfo = canvasInfo.bubbles[i]
-    await renderMessage(bubbleInfo, startx, starty, i === 0, ctx, fontSize)
+    await renderMessage(bubbleInfo, startx, starty, bubblePadding, i === 0, ctx, fontSize)
     starty += bubbleInfo.height + bubbleSpacing
   }
 
