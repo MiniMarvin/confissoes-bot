@@ -13,7 +13,9 @@ const {
 } = require('./dynamo/messageStorage')
 const { selectAction } = require('./processMessages')
 const { pushToQueue } = require('./sqs/manageQueue')
-const { default: Twitter } = require('twitter-lite')
+const { renderConfession } = require('./renderImage')
+const { fs } = require('memfs')
+const { postMedia } = require('./twitterManager')
 
 // Create an SQS service object
 const sqs = new AWS.SQS({ apiVersion: '2012-11-05' })
@@ -164,12 +166,31 @@ module.exports.processConfession = async (event, context, callback) => {
   console.log(JSON.stringify(userData))
 
   // match the timestamp
+  console.log('vai tentar postar')
   if (
     userData.hasConfession &&
     userData.confessionTimestamp == messageData.timestamp
   ) {
-    // TODO: post to twitter
 
+    console.log('vai tentar pegar as mensagens')
+    const messages = userData.confessionMessages.map(
+      (payload) => payload.message
+    )
+
+    const filePath = '/out.png'
+    try {
+      console.log('vai tentar gerar a imagem')
+      await renderConfession(messages, filePath, fs)
+      console.log('vai tentar postar no twitter...')
+      // TODO: criar uma lista de frases interessantes para utilizar como legenda
+      await postMedia('segue uma confissão...', filePath, fs)
+      console.log('confession posted')
+    } catch(err) {
+      console.trace(err)
+    }
+
+    // TODO: Colocar no começo para que a pessoa possa postar outra confissão mais para frente caso ocorra algum erro, ou salvar em alguma coleção com o nome de erro...
+    console.log('vai fechar o registro no banco de dados')
     console.log('confession data:', JSON.stringify(userData.confessionMessages))
     await finishConfession(userData, messageTableName, dynamoDb)
   }

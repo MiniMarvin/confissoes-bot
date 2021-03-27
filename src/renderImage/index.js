@@ -209,6 +209,7 @@ module.exports.renderConfession = async (messages, outFilePath, fs) => {
   const horizontalPadding = 30
   const verticalPadding = 60
 
+  console.log('vai calcular o canvas')
   if (!font) font = await loadFont(fontPath)
   const canvasInfo = computeCanvas(
     messages,
@@ -218,6 +219,7 @@ module.exports.renderConfession = async (messages, outFilePath, fs) => {
     bubblePadding,
     bubbleSpacing
   )
+  console.log('calculou o canvas')
 
   const width = canvasInfo.width + 2 * bubblePadding
   const height = canvasInfo.height + 2 * verticalPadding
@@ -234,6 +236,7 @@ module.exports.renderConfession = async (messages, outFilePath, fs) => {
   let startx = horizontalPadding
   let starty = verticalPadding
 
+  console.log('vai renderizar as mensagens')
   for (let i = 0; i < canvasInfo.bubbles.length; i++) {
     const bubbleInfo = canvasInfo.bubbles[i]
     await renderMessage(
@@ -249,6 +252,7 @@ module.exports.renderConfession = async (messages, outFilePath, fs) => {
     starty += bubbleInfo.height + bubbleSpacing
   }
 
+  console.log('vai salvar o arquivo')
   // TODO: create in memory stream to output to the twitter api
   let image = fs.createWriteStream(outFilePath)
   return new Promise((resolve, reject) => {

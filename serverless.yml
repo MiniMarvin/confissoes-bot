@@ -102,6 +102,8 @@ functions:
           method: get
   processConfession:
     handler: src/handler.processConfession
+    memorySize: 1024
+    timeout: 10
     events:
       - sqs:
           arn:
