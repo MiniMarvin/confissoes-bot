@@ -4,8 +4,14 @@ const stream = require('stream')
 const fs = require('fs')
 const pathModule = require('path')
 const { measureText, loadFont } = require('./textRender')
+const { computeBubble } = require('./compute')
 
 const borderRadius = 20
+const fontPath = pathModule.resolve(__dirname, '../assets/Roboto-Regular.ttf')
+/**
+ * @type {opentype.Font}
+ */
+let font = null
 
 /**
  * Renderiza uma mensagem em uma bolha no board.
@@ -18,20 +24,55 @@ const borderRadius = 20
 const renderMessage = async (text, y, start, ctx, fontSize = 24) => {
   ctx.fillStyle = 'rgba(66,83,99,1)'
 
-  // TODO: compute bubble width
-  // TODO: compute bubble height
-  const bubbleWidth = 420
-  const bubbleHeight = 60
-  if (start) drawChatBubble(15, y, bubbleWidth, bubbleHeight, borderRadius, ctx)
-  else drawMidBubble(15, y, 420, 60, 20, ctx)
+  const maxWidth = 380
+  const padding = 20
+  const margin = 15
+
+  if (!font) font = await loadFont(fontPath)
+  const bubbleInfo = await computeBubble(
+    text,
+    font,
+    fontSize,
+    maxWidth,
+    padding
+  )
+  console.log('bubble infos:', bubbleInfo)
+
+  console.log('drawing bubble at x:', margin, 'and y:', y, 'and width:', bubbleInfo.width, 'and height:', bubbleInfo.height, 'width borderRadius:', borderRadius)
+
+  if (start)
+    drawChatBubble(
+      margin,
+      y,
+      bubbleInfo.width,
+      bubbleInfo.height,
+      borderRadius,
+      ctx
+    )
+  else
+    drawMidBubble(
+      margin,
+      y,
+      bubbleInfo.width,
+      bubbleInfo.height,
+      borderRadius,
+      ctx
+    )
 
   ctx.fillStyle = '#ffffff'
   ctx.font = `${24}pt 'Roboto'`
   // TODO: setup the messages that stay in each part of the message
-  const parts = [text]
-  for (let p of parts) {
-    ctx.fillText(p, 30, 65)
-  }
+  bubbleInfo.lines.forEach((line) => {
+    console.log(
+      "draw line '",
+      line.text,
+      "' at x:",
+      margin + padding,
+      'and y:',
+      line.y
+    )
+    ctx.fillText(line.text, margin + padding, y + line.y)
+  })
 }
 
 /**
@@ -47,15 +88,12 @@ const renderConfession = async (messages) => {
   ctx.fillStyle = 'rgba(23,31,42,1)'
   ctx.fillRect(0, 0, width, height)
 
-  const fontPath = pathModule.resolve(__dirname, '../assets/Roboto-Regular.ttf')
   const setFontContextPromise = setFont(fontPath)
-  const font = await loadFont(fontPath)
   await setFontContextPromise
   const fontSize = 24
 
   for (let text of messages) {
-    console.log('text size:', await measureText(text, font, fontSize))
-    renderMessage(text, 30, true, ctx, fontSize)
+    await renderMessage(text, 30, true, ctx, fontSize)
   }
 
   // TODO: create in memory stream to output to the twitter api
