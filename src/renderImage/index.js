@@ -3,6 +3,7 @@ const opentype = require('opentype.js')
 const stream = require('stream')
 const fs = require('fs')
 const pathModule = require('path')
+const { measureText } = require('./textRender')
 
 const borderRadius = 20
 
@@ -30,30 +31,6 @@ const renderMessage = async (text, y, start, ctx, fontSize = 24) => {
   const parts = [text]
   for (let p of parts) {
     ctx.fillText(p, 30, 65)
-  }
-}
-
-/**
- * Measure text size
- *
- * @param {string} text The name to give the font
- * @param {opentype.Font} font The font that is being used
- * @param {number} fontSize The number of points in the font
- *
- * @returns {{width: number, emHeightAscent: number, emHeightDescent: number}}}
- */
-const measureText = (text, font, fontSize) => {
-  const fsize = fontSize
-  const glyphs = font.stringToGlyphs(text)
-  let advance = 0
-  glyphs.forEach((g) => {
-    advance += g.advanceWidth
-  })
-
-  return {
-    width: (advance / font.unitsPerEm) * fsize,
-    emHeightAscent: (font.ascender / font.unitsPerEm) * fsize,
-    emHeightDescent: (font.descender / font.unitsPerEm) * fsize,
   }
 }
 
