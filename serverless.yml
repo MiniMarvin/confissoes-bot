@@ -135,7 +135,6 @@ resources:
       Properties:
         QueueName: ${self:provider.environment.CONFESSIONS_QUEUE}
         DelaySeconds: 600
-        # FifoQueue: true
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt:

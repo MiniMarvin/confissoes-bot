@@ -16,6 +16,7 @@ const { pushToQueue } = require('./sqs/manageQueue')
 const { renderConfession } = require('./renderImage')
 const { fs } = require('memfs')
 const { postMedia } = require('./twitterManager')
+const { getRandomPhrase } = require('./twitterManager/phrases')
 
 // Create an SQS service object
 const sqs = new AWS.SQS({ apiVersion: '2012-11-05' })
@@ -162,17 +163,13 @@ module.exports.processConfession = async (event, context, callback) => {
     dynamoDb
   )
   const userData = userDataPack.Item
-
   console.log(JSON.stringify(userData))
 
   // match the timestamp
-  console.log('vai tentar postar')
   if (
     userData.hasConfession &&
     userData.confessionTimestamp == messageData.timestamp
   ) {
-
-    console.log('vai tentar pegar as mensagens')
     const messages = userData.confessionMessages.map(
       (payload) => payload.message
     )
@@ -181,11 +178,19 @@ module.exports.processConfession = async (event, context, callback) => {
     try {
       console.log('vai tentar gerar a imagem')
       await renderConfession(messages, filePath, fs)
-      console.log('vai tentar postar no twitter...')
+
+      // Recuperar os arrobas do twitter
+      const names = messages
+        .map((message) => message.match(/@(\w){1,15}/g))
+        .reduce((prev, curr) => [...(prev || []), ...(curr || [])], [])
+
+      const phrase = getRandomPhrase()
+      const postMessage = phrase + '\n\n' + names.join(' ')
+
       // TODO: criar uma lista de frases interessantes para utilizar como legenda
-      await postMedia('segue uma confissão...', filePath, fs)
+      await postMedia(postMessage, filePath, fs)
       console.log('confession posted')
-    } catch(err) {
+    } catch (err) {
       console.trace(err)
     }
 
