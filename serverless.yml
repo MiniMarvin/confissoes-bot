@@ -134,7 +134,8 @@ resources:
       Type: 'AWS::SQS::Queue'
       Properties:
         QueueName: ${self:provider.environment.CONFESSIONS_QUEUE}
-        DelaySeconds: 30
+        DelaySeconds: 600
+        # FifoQueue: true
         RedrivePolicy:
           deadLetterTargetArn:
             Fn::GetAtt:

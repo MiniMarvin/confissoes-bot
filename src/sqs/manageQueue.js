@@ -4,10 +4,9 @@
  * @param {string} queueUrl
  * @param {AWS.SQS} sqs
  */
-const pushToQueue = (messageData, queueUrl, sqs) => {
+module.exports.pushToQueue = (messageData, queueUrl, sqs) => {
   const params = {
     // Remove DelaySeconds parameter and value for FIFO queues
-    DelaySeconds: 10,
     MessageBody: JSON.stringify(messageData),
     QueueUrl: queueUrl,
   }
@@ -15,6 +14,16 @@ const pushToQueue = (messageData, queueUrl, sqs) => {
   return sqs.sendMessage(params).promise()
 }
 
-module.exports = {
-  pushToQueue,
+/**
+ *
+ * @param {string} queueUrl
+ * @param {AWS.SQS} sqs
+ */
+module.exports.readQueue = async (queueUrl, sqs) => {
+  const params = {
+    QueueUrl: queueUrl,
+    MaxNumberOfMessages: 1,
+  }
+  const message = await sqs.receiveMessage(params).promise()
+  return message
 }
