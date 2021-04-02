@@ -1,8 +1,10 @@
 const pimage = require('pureimage')
 const opentype = require('opentype.js')
 const pathModule = require('path')
-const { loadFont } = require('./textRender')
+const { loadFont } = require('./textUtils')
 const { computeCanvas } = require('./compute')
+const { removeEmojis, loadEmoji } = require('./emoji')
+const Context = require('pureimage/src/context')
 
 const borderRadius = 20
 const fontPath = pathModule.resolve(__dirname, '../assets/Roboto-Regular.ttf')
@@ -139,14 +141,23 @@ const setFont = async (path) => {
  * Renderiza uma mensagem em uma bolha no board.
  *
  * @param {{
-    lines: {
-        text: string;
-        y: number;
-        width: number;
-    }[];
-    width: number;
-    height: number;
-  }} bubbleInfo O texto que deve ser renderizado na bolha.
+ *    lines: {
+ *      text: string,
+ *      y: number,
+ *      width: number,
+ *      emojis: {
+ *        x: number,
+ *        y: number,
+ *        width: number,
+ *        height: number,
+ *        url: string,
+ *        emoji: string,
+ *        index: number
+ *      }[]
+ *    }[],
+ *    width: number,
+ *    height: number
+ * }} bubbleInfo O texto que deve ser renderizado na bolha.
  * @param {number} x A posição x inicial.
  * @param {number} y A posição y inicial.
  * @param {number} padding O padding interno da bolha.
@@ -187,10 +198,29 @@ const renderMessage = async (
 
   ctx.fillStyle = '#ffffff'
   ctx.font = `${fontSize}pt 'Roboto'`
+  let emojiPromises = []
   // TODO: setup the messages that stay in each part of the message
-  bubbleInfo.lines.forEach((line) => {
-    ctx.fillText(line.text, margin + padding, y + line.y)
+  const linePromises = bubbleInfo.lines.map(async (line) => {
+    const promises = line.emojis.map(async (emojiData) => {
+      let emoji = await loadEmoji(emojiData.url)
+      ctx.drawImageWithAlpha(
+        emoji,
+        0,
+        0,
+        emoji.width,
+        emoji.height,
+        margin + padding + emojiData.x,
+        y + emojiData.y,
+        emojiData.width,
+        emojiData.height
+      )
+    })
+    emojiPromises = [...emojiPromises, ...promises]
+
+    ctx.fillText(removeEmojis(line.text), margin + padding, y + line.y)
   })
+
+  await Promise.all([...linePromises, ...emojiPromises])
 }
 
 /**
@@ -262,4 +292,74 @@ module.exports.renderConfession = async (messages, outFilePath, fs) => {
         reject(e)
       })
   })
+}
+
+/**
+ * Provides different ways to draw an image onto the canvas.
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage
+ *
+ * @param {Bitmap} bitmap An instance of the {@link Bitmap} class to use for drawing
+ * @param {number} sx     The X coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
+ * @param {number} sy     The Y coordinate of the top left corner of the sub-rectangle of the source image to draw into the destination context.
+ * @param {number} sw     The width of the sub-rectangle of the source {@link Bitmap} to draw into the destination context. If not specified, the entire rectangle from the coordinates specified by `sx` and `sy` to the bottom-right corner of the image is used.
+ * @param {number} sh     The height of the sub-rectangle of the source {@link Bitmap} to draw into the destination context.
+ * @param {number} dx     The X coordinate in the destination canvas at which to place the top-left corner of the source {@link Bitmap}
+ * @param {number} dy     The Y coordinate in the destination canvas at which to place the top-left corner of the source {@link Bitmap}
+ * @param {number} dw     The width to draw the {@link Bitmap} in the destination canvas. This allows scaling of the drawn image. If not specified, the image is not scaled in width when drawn
+ * @param {number} dh     The height to draw the {@link Bitmap} in the destination canvas. This allows scaling of the drawn image. If not specified, the image is not scaled in height when drawn
+ *
+ * @returns {void}
+ *
+ * @memberof Context
+ */
+Context.prototype.drawImageWithAlpha = function (
+  bitmap,
+  sx,
+  sy,
+  sw,
+  sh,
+  dx,
+  dy,
+  dw,
+  dh
+) {
+  // two argument form
+  if (typeof sw === 'undefined')
+    return this.drawImage(
+      bitmap,
+      0,
+      0,
+      bitmap.width,
+      bitmap.height,
+      sx,
+      sy,
+      bitmap.width,
+      bitmap.height
+    )
+  // four argument form
+  if (typeof dx === 'undefined')
+    return this.drawImage(
+      bitmap,
+      0,
+      0,
+      bitmap.width,
+      bitmap.height,
+      sx,
+      sy,
+      sw,
+      sh
+    )
+  for (var i = 0; i < dw; i++) {
+    var tx = i / dw
+    var ssx = Math.floor(tx * sw) + sx
+    for (var j = 0; j < dh; j++) {
+      var ty = j / dh
+      var ssy = sy + Math.floor(ty * sh)
+      var rgba = bitmap.getPixelRGBA(ssx, ssy)
+      if (rgba & 0b11111111) {
+        this.bitmap.setPixelRGBA(dx + i, dy + j, rgba)
+      }
+    }
+  }
 }

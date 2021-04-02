@@ -5,9 +5,12 @@
   "main": "src/handler.js",
   "dependencies": {
     "aws-sdk": "^2.867.0",
+    "fontkit": "^1.8.1",
     "memfs": "^3.2.0",
     "opentype": "^0.1.2",
     "pureimage": "^0.2.7",
+    "request": "^2.88.2",
+    "twemoji": "^13.0.2",
     "twitter": "^1.7.1"
   },
   "devDependencies": {
