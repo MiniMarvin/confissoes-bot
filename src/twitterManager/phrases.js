@@ -5,10 +5,9 @@ const phrases = [
   '👁👄👁',
   'e essa aí ein?',
   'serase?',
-  '🤭🤭🤭',
   '🤔',
 ]
 
 module.exports.getRandomPhrase = () => {
-  return phrases[Math.round(Math.random() * phrases.length)]
+  return phrases[Math.ceil(Math.random() * phrases.length)]
 }
