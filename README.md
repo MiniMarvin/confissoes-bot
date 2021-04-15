@@ -1,6 +1,13 @@
-# indiretas-api
-Envio de quotes anônimas para um usuário através de uma api, que registra a quote anônima junto com metadados de envio e publica em um bot no twitter para que você possa registrar quotes e indiretas
+# Confissoes Bot
+[Versão em inglês](README-en.md)  
 
+[Confi](https://twitter.com/confissoes_bot) é um robô que publica no twitter confissões que são enviadas na DM do robô e faz o post de forma anônima com algum comentário engraçadinho. Foi inspirado em uma página do twitter chamada [cconfissões](https://twitter.com/cconfissoes). 
+
+## O projeto
+
+O projeto é basicamente um projeto construído com serverless a estrutura consiste de um serviço http que recebe requisições do webhook do twitter, é processado por uma função lambda que faz o registro da mensagem em um banco Dynamodb e faz a publicação de um registro em uma fila do SQS com atraso que vai ser utilizada para disparar uma função lambda que vai validar se deve postar, gerar a imagem que deve ser postada no feed e atualizar a coleção do ddb para garantir que o registro já foi postado. Caso não seja possível efetivar o post em até 6 tentativas de trigger a mensagem vai ser jogada em uma DLQ de forma que é possível realizar o debug do que ocorreu e posteriormente forçar um reprocessamento ao corrigir algum bug.  
+
+![arquitetura confissões bot](assets/confissoes_bot.png)
 
 ### O payload
 O payload que é recebido do twitter para uma DM é o seguinte: 
