@@ -7,9 +7,19 @@
 
 ## The project
 
-The project is simply a service made with serverless on AWS and its structure consists of a http service with an API Gateway that receives requests from the twitter webhook. Those messages are processed on a lambda function that registers the messages on dynamodb for an user and posts the id of the user with timestamp on a SQS queue that has a delay and will be used latter to trigger a lambda fucntion that parses the aggregate of messages and make the image to post on the feed and makes the post updating the collection on dynamodb. If it's not possible on successfully conclude the process of the queue in 6 tries it posts the message on a DLQ that can be used to debug and reprocess the message once the service is fixed.
+The project is simply a service made with serverless on AWS and its structure consists of a http service with an API Gateway that receives requests from the twitter webhook.  
+
+Those messages are processed on a lambda function that registers the messages on dynamodb for an user and posts the id of the user with timestamp on a SQS queue that has a delay and will be used latter to trigger a lambda function that parses the aggregate of messages and make the image to post on the feed and makes the post updating the collection on dynamodb.  
+
+If it's not possible on successfully conclude the process of the queue in 6 tries it posts the message on a DLQ that can be used to debug and reprocess the message once the service is fixed.
 
 ![confessions bot architecture](assets/confissoes_bot.png)
+
+## Next steps  
+Even thought the project is ready and functional, and also funny, there are stil a lot of improvements to be made to make it even more interesting:    
+- [x] Suport to emojis
+- [ ] Robot feedback on DM
+- [ ] Admin validation system for the post
 
 ### The payload
 The payload received from the twitter's DM message:  

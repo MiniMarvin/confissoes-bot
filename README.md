@@ -7,9 +7,19 @@
 
 ## O projeto
 
-O projeto é basicamente um projeto construído com serverless a estrutura consiste de um serviço http que recebe requisições do webhook do twitter, é processado por uma função lambda que faz o registro da mensagem em um banco Dynamodb e faz a publicação de um registro em uma fila do SQS com atraso que vai ser utilizada para disparar uma função lambda que vai validar se deve postar, gerar a imagem que deve ser postada no feed e atualizar a coleção do ddb para garantir que o registro já foi postado. Caso não seja possível efetivar o post em até 6 tentativas de trigger a mensagem vai ser jogada em uma DLQ de forma que é possível realizar o debug do que ocorreu e posteriormente forçar um reprocessamento ao corrigir algum bug.  
+O projeto é basicamente um robô construído com uma infraestrutura serverless.  
+
+Consiste de um serviço HTTP na AWS com um API Gateway que recebe requisições do webhook do twitter, é processado por uma função lambda que faz o registro da mensagem em um banco Dynamodb e faz a publicação de um registro em uma fila do SQS com atraso que vai ser utilizada para disparar uma função lambda.  
+
+Essa função vai validar se deve postar, gerar a imagem que deve ser postada no feed e atualizar a coleção do ddb para garantir que o registro já foi postado. Caso não seja possível efetivar o post em até 6 tentativas de trigger a mensagem vai ser jogada em uma DLQ de forma que é possível realizar o debug do que ocorreu e posteriormente forçar um reprocessamento ao corrigir algum bug.  
 
 ![arquitetura confissões bot](assets/confissoes_bot.png)
+
+## Próximos passos  
+Apesar do projeto já estar funcional e ser bem divertido ainda existem muitas melhorias que podem ser adicionadas para tornar ainda mais interessante:  
+- [x] Suporte a Emojis
+- [ ] Resposta do robô na DM do usuário
+- [ ] Sistema de validação para o Admin antes de fazer o Post
 
 ### O payload
 O payload que é recebido do twitter para uma DM é o seguinte: 
