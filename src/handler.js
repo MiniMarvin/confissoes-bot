@@ -158,7 +158,7 @@ module.exports.status = async (event, context, callback) => {
 }
 
 module.exports.processConfession = async (event, context, callback) => {
-  console.log(JSON.stringify(event))
+  // console.log(JSON.stringify(event))
 
   // TODO: get the message from the database, clean it and post the confession in the feed from twitter
   // TODO: improve the Post from the confession by making an image with the chat baloons
@@ -172,7 +172,7 @@ module.exports.processConfession = async (event, context, callback) => {
     dynamoDb
   )
   const userData = userDataPack.Item
-  console.log(JSON.stringify(userData))
+  // console.log(JSON.stringify(userData))
 
   // match the timestamp
   if (
@@ -211,4 +211,19 @@ module.exports.processConfession = async (event, context, callback) => {
   return {}
 }
 
-module.exports.chatFeedback = async (event, context, callback) => {}
+module.exports.chatFeedback = async (event, context, callback) => {
+  const messageData = JSON.parse(event.Records[0].body)
+  const userDataPack = await retrieveConfessionDataForUser(
+    messageData.userId,
+    messageTableName,
+    dynamoDb
+  )
+  const userData = userDataPack.Item
+  if (
+    userData.hasConfession &&
+    userData.lastMessageTimestamp == messageData.timestamp
+  ) {
+    const receivedMessage = process.env.RECEIVED_CONFESSION_MESSAGE
+    await sendDm(receivedMessage, messageData.userId)
+  }
+}

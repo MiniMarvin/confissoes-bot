@@ -67,16 +67,16 @@ functions:
             Fn::GetAtt:
               - ConfessionsQueue
               - Arn
-  # chatFeedback:
-  #   handler: src/handler.chatFeedback
-  #   memorySize: 128
-  #   timeout: 10
-  #   events:
-  #     - sqs:
-  #         arn:
-  #           Fn::GetAtt:
-  #             - FeedbackQueue
-  #             - Arn
+  chatFeedback:
+    handler: src/handler.chatFeedback
+    memorySize: 128
+    timeout: 10
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - FeedbackQueue
+              - Arn
 
 # you can add CloudFormation resource templates here
 resources:
