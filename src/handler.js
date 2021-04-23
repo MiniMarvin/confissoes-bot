@@ -15,7 +15,7 @@ const { selectAction } = require('./processMessages')
 const { pushToQueue } = require('./sqs/manageQueue')
 const { renderConfession } = require('./renderImage')
 const { fs } = require('memfs')
-const { postMedia } = require('./twitterManager')
+const { postMedia, sendDm } = require('./twitterManager')
 const { getRandomPhrase } = require('./twitterManager/phrases')
 
 // Create an SQS service object
@@ -26,21 +26,19 @@ console.log('messages table: ', messageTableName)
 
 module.exports.twitterHandler = async (event, context, callback) => {
   // Logs the event just to verify latter
-  console.log(JSON.stringify(event))
+  // console.log(JSON.stringify(event))
   const request = JSON.parse(event.body)
 
   // validate if the event is DM message event, otherwise ignore.
   if (request.direct_message_events?.length > 0) {
     // TODO: melhorar o processamento de texto
     // Obs: Da forma que está implementado pode ocorrer um problema caso venham multiplos ids em uma única chamada
-    // console.log('selecting action')
-    // TODO: validate if the userId is from the page, if so ignore and return imediately.
+    console.log('selecting action')
     const actionPayload = selectAction(request)
-    // console.log(JSON.stringify(actionPayload))
     const userId = actionPayload.messages[0].userId
 
     if (actionPayload.action === 'CONFESS') {
-      // console.log('detected confession')
+      console.log('detected confession')
       const ongoingConfession = await alreadyInQueue(
         userId,
         messageTableName,
@@ -51,7 +49,7 @@ module.exports.twitterHandler = async (event, context, callback) => {
         .map((event) => event.timestamp)
         .reduce((prev, current) => (current < prev ? current : prev))
 
-      // console.log('has ongoing confession?', ongoingConfession)
+      console.log('has ongoing confession?', ongoingConfession)
       const messagePayload = {
         userId: userId,
         timestamp: timestamp,
@@ -61,7 +59,7 @@ module.exports.twitterHandler = async (event, context, callback) => {
 
       pushToQueue(messagePayload, feedbackQueueUrl, sqs)
         .then((res) => {
-          console.log('message insert in queue:', JSON.stringify(res))
+          console.log('message insert in feedback queue')
         })
         .catch((err) => {
           console.trace(err)
@@ -72,7 +70,7 @@ module.exports.twitterHandler = async (event, context, callback) => {
 
         pushToQueue(messagePayload, confessionQueueUrl, sqs)
           .then((res) => {
-            console.log('message insert in queue:', JSON.stringify(res))
+            console.log('message insert in confession queue')
           })
           .catch((err) => {
             console.trace(err)
@@ -102,6 +100,8 @@ module.exports.twitterHandler = async (event, context, callback) => {
       const userId = actionPayload.messages[0].userId
       await cancelConfession(userId, messageTableName, dynamoDb)
       // TODO: answer the cancelation with the confession
+      const cancelMessage = process.env.CANCELATION_MESSAGE
+      await sendDm(request.users[userId].screen_name + ', ' + cancelMessage, userId)
     } else {
       console.log('ignoring confession')
     }

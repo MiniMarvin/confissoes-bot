@@ -20,6 +20,8 @@ provider:
     FEEDBACK_QUEUE: ${self:service}-feedback-queue-${opt:stage, self:provider.stage}
     FEEDBACK_QUEUE_DLQ: ${self:service}-feedback-queue-${opt:stage, self:provider.stage}-dlq
     FEEDBACK_QUEUE_URL: { Ref: FeedbackQueue }
+    CANCELATION_MESSAGE: "sua confissão foi cancelada com sucesso. Pra começar outra, basta enviar mensagens que vou anotar sua confissão 🕵🏾‍♀️ 🌝"
+    RECEIVED_CONFESSION_MESSAGE: "Sua confissão está anotada 📝, se quiser adicionar mais alguma coisa basta enviar outras mensagens e se quiser cancelar, basta enviar \"cancelar\""
   iamRoleStatements:
     - Effect: 'Allow'
       Action:
