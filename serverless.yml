@@ -1,26 +1,8 @@
-# Welcome to Serverless!
-#
-# This file is the main config file for your service.
-# It's very minimal at this point and uses default values.
-# You can always add more config options for more control.
-# We've included some commented out config examples here.
-# Just uncomment any of them to get that config option.
-#
-# For full config options, check the docs:
-#    docs.serverless.com
-#
-# Happy Coding!
-
-# name: indiretas-anonimas
 service: indiretas-anonimas
-# app and org for use with dashboard.serverless.com
 app: indiretas-anonimas
 org: minimarvin
 plugins:
   - serverless-dotenv-plugin
-
-# You can pin your service to only deploy with a specific Serverless version
-# Check out our docs for more details
 frameworkVersion: '2'
 useDotenv: true
 
@@ -32,9 +14,12 @@ provider:
   region: us-east-1
   environment:
     MESSAGES_TABLE: ${self:service}-${opt:stage, self:provider.stage}
-    CONFESSIONS_QUEUE: ${self:service}-${opt:stage, self:provider.stage}
-    CONFESSIONS_QUEUE_DLQ: ${self:service}-${opt:stage, self:provider.stage}-dlq
+    CONFESSIONS_QUEUE: ${self:service}-confession-queue-${opt:stage, self:provider.stage}
+    CONFESSIONS_QUEUE_DLQ: ${self:service}-confession-queue-${opt:stage, self:provider.stage}-dlq
     CONFESSIONS_QUEUE_URL: { Ref: ConfessionsQueue }
+    FEEDBACK_QUEUE: ${self:service}-feedback-queue-${opt:stage, self:provider.stage}
+    FEEDBACK_QUEUE_DLQ: ${self:service}-feedback-queue-${opt:stage, self:provider.stage}-dlq
+    FEEDBACK_QUEUE_URL: { Ref: FeedbackQueue }
   iamRoleStatements:
     - Effect: 'Allow'
       Action:
@@ -45,36 +30,6 @@ provider:
         - dynamodb:UpdateItem
         - sqs:SendMessage
       Resource: '*'
-
-# you can add statements to the Lambda function's IAM Role here
-#  iamRoleStatements:
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:ListBucket"
-#      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:PutObject"
-#      Resource:
-#        Fn::Join:
-#          - ""
-#          - - "arn:aws:s3:::"
-#            - "Ref" : "ServerlessDeploymentBucket"
-#            - "/*"
-
-# you can define service wide environment variables here
-#  environment:
-#    variable1: value1
-
-# you can add packaging information here
-#package:
-#  include:
-#    - include-me.js
-#    - include-me-dir/**
-#  exclude:
-#    - exclude-me.js
-#    - exclude-me-dir/**
-
 functions:
   status:
     handler: src/handler.status
@@ -110,6 +65,16 @@ functions:
             Fn::GetAtt:
               - ConfessionsQueue
               - Arn
+  # chatFeedback:
+  #   handler: src/handler.chatFeedback
+  #   memorySize: 128
+  #   timeout: 10
+  #   events:
+  #     - sqs:
+  #         arn:
+  #           Fn::GetAtt:
+  #             - FeedbackQueue
+  #             - Arn
 
 # you can add CloudFormation resource templates here
 resources:
@@ -145,6 +110,21 @@ resources:
       Type: 'AWS::SQS::Queue'
       Properties:
         QueueName: ${self:provider.environment.CONFESSIONS_QUEUE_DLQ}
+    FeedbackQueue:
+      Type: 'AWS::SQS::Queue'
+      Properties:
+        QueueName: ${self:provider.environment.FEEDBACK_QUEUE}
+        DelaySeconds: 10
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - FeedbackQueueDLQ
+              - Arn
+          maxReceiveCount: 4
+    FeedbackQueueDLQ:
+      Type: 'AWS::SQS::Queue'
+      Properties:
+        QueueName: ${self:provider.environment.FEEDBACK_QUEUE_DLQ}
   Outputs:
     NewOutput:
       Description: 'Description for the output'

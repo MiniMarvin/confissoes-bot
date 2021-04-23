@@ -33,37 +33,44 @@ module.exports.twitterHandler = async (event, context, callback) => {
   if (request.direct_message_events?.length > 0) {
     // TODO: melhorar o processamento de texto
     // Obs: Da forma que está implementado pode ocorrer um problema caso venham multiplos ids em uma única chamada
-    console.log('selecting action')
+    // console.log('selecting action')
     // TODO: validate if the userId is from the page, if so ignore and return imediately.
     const actionPayload = selectAction(request)
-    console.log(JSON.stringify(actionPayload))
+    // console.log(JSON.stringify(actionPayload))
     const userId = actionPayload.messages[0].userId
 
     if (actionPayload.action === 'CONFESS') {
-      console.log('detected confession')
+      // console.log('detected confession')
       const ongoingConfession = await alreadyInQueue(
         userId,
         messageTableName,
         dynamoDb
       )
 
-      console.log('has ongoing confession?', ongoingConfession)
+      const timestamp = actionPayload.messages
+        .map((event) => event.timestamp)
+        .reduce((prev, current) => (current < prev ? current : prev))
+
+      // console.log('has ongoing confession?', ongoingConfession)
+      const messagePayload = {
+        userId: userId,
+        timestamp: timestamp,
+      }
+
+      const feedbackQueueUrl = process.env.FEEDBACK_QUEUE_URL
+
+      pushToQueue(messagePayload, feedbackQueueUrl, sqs)
+        .then((res) => {
+          console.log('message insert in queue:', JSON.stringify(res))
+        })
+        .catch((err) => {
+          console.trace(err)
+        })
 
       if (!ongoingConfession) {
-        const timestamp = actionPayload.messages
-          .map((event) => event.timestamp)
-          .reduce((prev, current) => (current < prev ? current : prev))
+        const confessionQueueUrl = process.env.CONFESSIONS_QUEUE_URL
 
-        const queueUrl = process.env.CONFESSIONS_QUEUE_URL
-        console.log(`pushing to queue with url: ${queueUrl}...`)
-        pushToQueue(
-          {
-            userId: userId,
-            timestamp: timestamp,
-          },
-          queueUrl,
-          sqs
-        )
+        pushToQueue(messagePayload, confessionQueueUrl, sqs)
           .then((res) => {
             console.log('message insert in queue:', JSON.stringify(res))
           })
@@ -85,6 +92,7 @@ module.exports.twitterHandler = async (event, context, callback) => {
         await addMessagesToConfession(
           actionPayload.messages,
           userId,
+          timestamp,
           messageTableName,
           dynamoDb
         )
@@ -93,6 +101,7 @@ module.exports.twitterHandler = async (event, context, callback) => {
       console.log('canceling confession')
       const userId = actionPayload.messages[0].userId
       await cancelConfession(userId, messageTableName, dynamoDb)
+      // TODO: answer the cancelation with the confession
     } else {
       console.log('ignoring confession')
     }
@@ -201,3 +210,5 @@ module.exports.processConfession = async (event, context, callback) => {
   }
   return {}
 }
+
+module.exports.chatFeedback = async (event, context, callback) => {}

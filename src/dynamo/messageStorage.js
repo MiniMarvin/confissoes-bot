@@ -28,7 +28,6 @@ const retrieveConfessionDataForUser = (userId, tableName, client) => {
  * @returns {Promise<boolean>}
  */
 const alreadyInQueue = async (userId, tableName, client) => {
-  // TODO: implement the dynamodb verification for message in queue
   const documentExpression = {
     TableName: tableName,
     Key: { id: userId },
@@ -48,13 +47,19 @@ const alreadyInQueue = async (userId, tableName, client) => {
  * Insere uma mensagem a uma lista de confissões do usuário.
  *
  * @param {{ userId: string, message: string, timestamp: number}[]} messages Lista de mensagens a ser inserido no objeto de confissões.
- * @param {number} timestamp Timestamp da mensagem.
  * @param {string} userId O id do usuário no twitter.
+ * @param {number} timestamp Timestamp da mensagem.
  * @param {string} tableName O nome da tablea que contém as informações do usuário.
  * @param {AWS.DynamoDB.DocumentClient} client O cliente de acesso ao dynamodb.
  * @returns {Promise<boolean>}
  */
-const addMessagesToConfession = async (messages, userId, tableName, client) => {
+const addMessagesToConfession = async (
+  messages,
+  userId,
+  timestamp,
+  tableName,
+  client
+) => {
   const messagesExpression = messages.map((message) => ({
     message: message.message,
     timestamp: message.timestamp,
@@ -66,13 +71,15 @@ const addMessagesToConfession = async (messages, userId, tableName, client) => {
       id: userId,
     },
     UpdateExpression:
-      'SET #messageList = list_append(if_not_exists(#messageList, :empty_list), :vals)',
+      'SET #messageList = list_append(if_not_exists(#messageList, :empty_list), :messages), #lastMessageTimestamp = :lastMessageTimestamp',
     ExpressionAttributeNames: {
       '#messageList': 'confessionMessages',
+      '#lastMessageTimestamp': 'lastMessageTimestamp',
     },
     ExpressionAttributeValues: {
-      ':vals': messagesExpression,
+      ':messages': messagesExpression,
       ':empty_list': [],
+      ':lastMessageTimestamp': timestamp,
     },
   }
 
@@ -127,6 +134,7 @@ const addConfession = async (
     const messagesPromise = addMessagesToConfession(
       messages,
       userId,
+      timestamp,
       tableName,
       client
     )
@@ -151,7 +159,7 @@ const addConfession = async (
  * @param {AWS.DynamoDB.DocumentClient} client Cliente de acesso do dynamo.
  * @returns {Promise<boolean>}
  */
- const finishConfession = (confessionData, tableName, client) => {
+const finishConfession = (confessionData, tableName, client) => {
   if (
     !confessionData.confessionMessages ||
     confessionData.confessionMessages.length === 0
@@ -187,7 +195,6 @@ const addConfession = async (
   return client.update(params).promise()
 }
 
-
 /**
  * Cancela a confissão realizada por um usuário.
  *
@@ -201,14 +208,18 @@ const cancelConfession = async (userId, tableName, client) => {
   // Desabilita todas as flags que indicam que o documento tem uma confissão em andamento
   // e o identificador de timestamp para o andamento daquela confissão através de uma
   // fila do SQS.
-  
-  const confessionData = await retrieveConfessionDataForUser(userId, tableName, client)
+
+  const confessionData = await retrieveConfessionDataForUser(
+    userId,
+    tableName,
+    client
+  )
   const timestamp = new Date().getTime()
   canceledConfession = [
     {
       cancelTimestamp: timestamp,
       confession: confessionData?.Item?.confessionMessages || [],
-    }
+    },
   ]
 
   const updateMessageList = {
@@ -222,7 +233,7 @@ const cancelConfession = async (userId, tableName, client) => {
       '#messageList': 'confessionMessages',
       '#canceledConfessions': 'canceledConfessions',
       '#hasConfession': 'hasConfession',
-      '#timestamp': 'confessionTimestamp'
+      '#timestamp': 'confessionTimestamp',
     },
     ExpressionAttributeValues: {
       ':vals': canceledConfession,

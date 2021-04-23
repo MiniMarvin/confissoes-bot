@@ -5,8 +5,11 @@
   "main": "src/handler.js",
   "dependencies": {
     "aws-sdk": "^2.867.0",
+    "axios": "^0.21.1",
+    "crypto": "^1.0.1",
     "fontkit": "^1.8.1",
     "memfs": "^3.2.0",
+    "oauth-1.0a": "^2.2.6",
     "opentype": "^0.1.2",
     "pureimage": "^0.2.7",
     "request": "^2.88.2",
@@ -14,6 +17,7 @@
     "twitter": "^1.7.1"
   },
   "devDependencies": {
+    "http-proxy": "^1.18.1",
     "replay-aws-dlq": "^1.0.1",
     "serverless-dotenv-plugin": "^3.8.2"
   },
