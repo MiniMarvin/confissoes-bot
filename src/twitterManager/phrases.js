@@ -6,8 +6,11 @@ const phrases = [
   'e essa aí ein?',
   'serase?',
   '🤔',
+  'o que vocês acham disso?',
+  'vamos ver as opniões...',
+  '😳'
 ]
 
 module.exports.getRandomPhrase = () => {
-  return phrases[Math.ceil(Math.random() * phrases.length)]
+  return phrases[Math.floor(Math.random() * phrases.length)]
 }
